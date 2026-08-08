@@ -1,0 +1,56 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "globalEnv": ["ENCRYPTION_KEY", "MSG91_BASE_URL"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "dist/**", "!.next/cache/**"]
+    },
+    "@repo/db#build": {
+      "dependsOn": [],
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "prisma/**"],
+      "outputs": ["dist/**", "node_modules/.prisma/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "format": {
+      "dependsOn": ["^format"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": ["PORT"]
+    },
+    "prisma:generate": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
+    "prisma:migrate": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
+    "prisma:deploy": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
+    "prisma:studio": {
+      "cache": false,
+      "persistent": true,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
+    "prisma:seed": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
+    "prisma:reset": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    }
+  }
+}

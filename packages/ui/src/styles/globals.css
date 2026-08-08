@@ -1,0 +1,234 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@source "../../../apps/web/**/*.{js,ts,jsx,tsx}";
+@source "../**/*.{js,ts,jsx,tsx}";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+	/* Body / UI text — Inter */
+	--font-sans: var(--font-inter);
+	--font-mono: var(--font-geist-mono);
+	/* Headings / display — Plus Jakarta Sans */
+	--font-display: var(--font-jakarta);
+	--max-width-screen-3xl: 1920px;
+
+	/* -------- KPT brand palette (raw tokens) -------- */
+	--brand-orange: #e8651a; /* KPT Orange   — logo, primary actions, CTAs */
+	--brand-charcoal: #2c2c2c; /* KPT Charcoal — logo text, headings, navigation */
+	--brand-orange-dark: #c4521a; /* Orange Dark  — hover states */
+	--brand-orange-pale: #fef3eb; /* Orange Pale  — backgrounds, subtle tints */
+	--brand-soft-white: #f5f5f5; /* Off White    — backgrounds, cards */
+	--brand-stone: #6b7280; /* Stone Grey   — secondary text, icons */
+	--brand-cool-grey: #e0e0e0; /* Cool Grey    — borders, dividers */
+	--brand-amber: #f59e0b; /* Amber        — warnings, notifications */
+	--brand-coral: #ef4444; /* Red          — errors, urgent */
+	--brand-green: #22c55e; /* Green        — success, positive */
+	--brand-blue: #3b82f6; /* Blue         — insights, analytics */
+	--brand-purple: #8b5cf6; /* Purple       — opportunities, highlights */
+	/* Legacy aliases so existing Tailwind utilities keep working */
+	--brand-indigo: #2c2c2c;
+	--brand-teal: #e8651a;
+	--brand-turquoise: #c4521a;
+	--brand-mint: #fef3eb;
+	--brand-pale-aqua: #fef3eb;
+	--brand-lavender: #f5f5f5;
+	--brand-sky: #3b82f6;
+	--brand-lime: #22c55e;
+}
+
+:root {
+	--background: #f5f5f5;
+	--foreground: #2c2c2c;
+	--card: #ffffff;
+	--card-foreground: #2c2c2c;
+	--popover: #ffffff;
+	--popover-foreground: #2c2c2c;
+	--primary: #e8651a; /* KPT Orange — primary actions / CTAs / buttons */
+	--primary-foreground: #ffffff;
+	--secondary: #f0f0f0;
+	--secondary-foreground: #2c2c2c;
+	--muted: #f0f0f0;
+	--muted-foreground: #6b7280;
+	--accent: #fef3eb; /* Orange Pale — hover / subtle accent surfaces */
+	--accent-foreground: #2c2c2c;
+	--destructive: hsl(0 84.2% 60.2%);
+	--destructive-foreground: hsl(0 0% 98%);
+	--border: #e0e0e0;
+	--input: #e0e0e0;
+	--ring: #e8651a; /* KPT Orange focus ring */
+	--chart-1: #e8651a; /* KPT Orange */
+	--chart-2: #2c2c2c; /* Charcoal */
+	--chart-3: #f59e0b; /* Amber */
+	--chart-4: #3b82f6; /* Blue */
+	--chart-5: #8b5cf6; /* Purple */
+	--radius: 0.6rem;
+	--navbar: #1e1e1e;
+	/* Sidebar — dark charcoal rail with white text and orange active state */
+	--sidebar: #1e1e1e;
+	--sidebar-foreground: #f5f5f5;
+	--sidebar-primary: #e8651a; /* KPT Orange — active item */
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #2c2c2c; /* hover */
+	--sidebar-accent-foreground: #ffffff;
+	--sidebar-border: #333333;
+	--sidebar-ring: #e8651a;
+	--sidebar-gradient: linear-gradient(180deg, #1e1e1e 0%, #1e1e1e 80%, #2c1a0e 95%, #e8651a 100%);
+}
+
+.dark {
+	--background: #141414;
+	--foreground: #f5f5f5;
+	--card: #1e1e1e;
+	--card-foreground: #f5f5f5;
+	--popover: #1e1e1e;
+	--popover-foreground: #f5f5f5;
+	--primary: #f97316;
+	--primary-foreground: #ffffff;
+	--secondary: #2c2c2c;
+	--secondary-foreground: #f5f5f5;
+	--muted: #2c2c2c;
+	--muted-foreground: #9ca3af;
+	--accent: #3d2010;
+	--accent-foreground: #f5f5f5;
+	--destructive: hsl(0 62.8% 45%);
+	--destructive-foreground: hsl(0 0% 98%);
+	--border: #333333;
+	--input: #333333;
+	--ring: #e8651a;
+	--chart-1: #f97316;
+	--chart-2: #f59e0b;
+	--chart-3: #22c55e;
+	--chart-4: #3b82f6;
+	--chart-5: #8b5cf6;
+	--navbar: #141414;
+	--sidebar: #1e1e1e;
+	--sidebar-foreground: #f5f5f5;
+	--sidebar-primary: #e8651a;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #2c2c2c;
+	--sidebar-accent-foreground: #f5f5f5;
+	--sidebar-border: #333333;
+	--sidebar-ring: #e8651a;
+	--sidebar-gradient: linear-gradient(180deg, #1e1e1e 0%, #1e1e1e 80%, #2c1a0e 95%, #e8651a 100%);
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--color-navbar: var(--navbar);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+
+	/* KPT brand colors exposed as Tailwind utilities */
+	--color-brand-orange: var(--brand-orange);
+	--color-brand-charcoal: var(--brand-charcoal);
+	--color-brand-orange-dark: var(--brand-orange-dark);
+	--color-brand-orange-pale: var(--brand-orange-pale);
+	--color-brand-soft-white: var(--brand-soft-white);
+	--color-brand-stone: var(--brand-stone);
+	--color-brand-cool-grey: var(--brand-cool-grey);
+	--color-brand-amber: var(--brand-amber);
+	--color-brand-coral: var(--brand-coral);
+	--color-brand-green: var(--brand-green);
+	--color-brand-blue: var(--brand-blue);
+	--color-brand-purple: var(--brand-purple);
+	/* Legacy aliases */
+	--color-brand-indigo: var(--brand-indigo);
+	--color-brand-teal: var(--brand-teal);
+	--color-brand-turquoise: var(--brand-turquoise);
+	--color-brand-mint: var(--brand-mint);
+	--color-brand-pale-aqua: var(--brand-pale-aqua);
+	--color-brand-lavender: var(--brand-lavender);
+	--color-brand-sky: var(--brand-sky);
+	--color-brand-lime: var(--brand-lime);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+		font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+	}
+
+	/* Synkro type pairing: Plus Jakarta Sans for headings, Inter for body */
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-family: var(--font-display), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+	}
+
+	/* https://tailwindcss.com/docs/upgrade-guide#buttons-use-the-default-cursor */
+	button:not(:disabled),
+	[role='button']:not(:disabled) {
+		cursor: pointer;
+	}
+}
+
+/* -------------------------------------------------------------------------
+   KPT sidebar theming — dark charcoal rail with KPT orange active state.
+   ------------------------------------------------------------------------- */
+.synkro-sidebar {
+	background-color: #1E1E1E !important;
+	background-image: linear-gradient(180deg, #1E1E1E 0%, #1E1E1E 80%, #2C1A0E 95%, #E8651A 100%);
+	color: var(--sidebar-foreground);
+	border-color: var(--sidebar-border) !important;
+}
+.synkro-sidebar a,
+.synkro-sidebar button,
+.synkro-sidebar p,
+.synkro-sidebar span,
+.synkro-sidebar h4 {
+	color: var(--sidebar-foreground);
+}
+.synkro-sidebar .sidebar-muted {
+	color: color-mix(in srgb, var(--sidebar-foreground) 55%, transparent);
+}
+.synkro-sidebar a:hover,
+.synkro-sidebar button:hover {
+	background-color: var(--sidebar-accent);
+}
+.synkro-sidebar a.sidebar-active,
+.synkro-sidebar button.sidebar-active,
+.synkro-sidebar .bg-sidebar-primary {
+	background-color: var(--sidebar-primary) !important; /* KPT Orange */
+	color: var(--sidebar-primary-foreground) !important;
+}

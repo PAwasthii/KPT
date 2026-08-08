@@ -1,0 +1,38 @@
+{
+  "name": "@repo/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/client.js",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/client.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "build": "dotenv -e ../../.env -- prisma generate && tsc -p tsconfig.json",
+    "prepare": "dotenv -e ../../.env -- prisma generate && tsc -p tsconfig.json",
+    "prisma:generate": "dotenv -e ../../.env -- prisma generate",
+    "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "prisma:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "prisma:studio": "dotenv -e ../../.env -- prisma studio",
+    "prisma:reset": "dotenv -e ../../.env -- prisma migrate reset",
+    "prisma:push": "dotenv -e ../../.env -- prisma db push",
+    "prisma:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "db:switch:local": "powershell -ExecutionPolicy Bypass -File switch-db.ps1 local",
+    "db:switch:production": "powershell -ExecutionPolicy Bypass -File switch-db.ps1 production"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.21.1"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^7.4.2",
+    "prisma": "^5.21.1",
+    "tsx": "^4.7.0",
+    "typescript": "5.9.2"
+  }
+}

@@ -1,0 +1,1491 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                     Int                   @id @default(autoincrement())
+  email                  String                @unique
+  passwordHash           String                @map("password_hash")
+  createdAt              DateTime              @default(now()) @map("created_at")
+  role                   UserRole              @default(SALES)
+  phone                  String?
+  region                 Region?
+  deletedAt              DateTime?             @map("deleted_at")
+  deletedBy              Int?                  @map("deleted_by")
+  countryCode            String?               @default("91") @map("country_code")
+  firstName              String?               @map("first_name")
+  lastName               String?               @map("last_name")
+  location               String?
+  auditLogs              AuditLog[]            @relation("AuditLogUser")
+  botSessions            BotSession[]
+  campaigns              Campaign[]            @relation("CampaignCreator")
+  resolvedEnquiries      Enquiry[]             @relation("EnquiryResolver")
+  landingPageCampaigns   LandingPageCampaign[] @relation("LandingPageCampaignCreator")
+  assignmentRules        LeadAssignmentRule[]
+  leadRemarks            LeadRemark[]          @relation("LeadRemarkAuthor")
+  deletedLeads           Lead[]                @relation("LeadDeletedBy")
+  leads                  Lead[]                @relation("LeadOwner")
+  salesOrders            Order[]               @relation("SalesUserOrders")
+  passwordResets         PasswordReset[]
+  segmentsCreated        Segment[]             @relation("SegmentCreator")
+  segmentsUpdated        Segment[]             @relation("SegmentUpdater")
+  deletedByUser          User?                 @relation("UserDeletedBy", fields: [deletedBy], references: [id])
+  deletedUsers           User[]                @relation("UserDeletedBy")
+  whatsappNumbersCreated WhatsAppNumber[]      @relation("WhatsAppNumberCreator")
+  whatsappNumbersUpdated WhatsAppNumber[]      @relation("WhatsAppNumberUpdater")
+  // Opportunity-Quote-Order relations
+  ownedOpportunities        Opportunity[]         @relation("OpportunityOwner")
+  createdOpportunities      Opportunity[]         @relation("OpportunityCreator")
+  deletedOpportunities      Opportunity[]         @relation("OpportunityDeletedBy")
+  opportunityActivities     OpportunityActivity[] @relation("OpportunityActivityUser")
+  preparedQuotes            Quote[]               @relation("QuotePreparedBy")
+  approvedQuotes            Quote[]               @relation("QuoteApprovedBy")
+  deniedQuotes              Quote[]               @relation("QuoteDeniedBy")
+  ownedSalesOrders          SalesOrder[]          @relation("SalesOrderOwner")
+  approvedSalesOrders       SalesOrder[]          @relation("SalesOrderApprovedBy")
+  // Approval process relations
+  approvalRequestsTo        ApprovalProcess[]     @relation("ApprovalRequestedTo")
+  approvalRequestsBy        ApprovalProcess[]     @relation("ApprovalCreatedBy")
+  approvalActionsAs         ApprovalProcess[]     @relation("ApprovalLastActor")
+  notifications             Notification[]
+
+  @@index([region])
+  @@map("users")
+}
+
+model Account {
+  id            Int              @id @default(autoincrement())
+  name          String           @unique
+  industry      String?
+  website       String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  keywords      AccountKeyword[]
+  contacts      Contact[]
+  // Opportunity-Quote-Order relations
+  opportunities Opportunity[]
+  quotes        Quote[]
+  salesOrders   SalesOrder[]
+
+  @@map("accounts")
+}
+
+model Contact {
+  id              Int                @id @default(autoincrement())
+  accountId       Int?               @map("account_id")
+  name            String
+  email           String             @unique
+  phone           String?
+  position        String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  city            String?
+  pincode         String?
+  state           String?
+  countryCode     String?            @default("91") @map("country_code")
+  emailOptOut     Boolean            @default(false) @map("email_opt_out")
+  optOutDate      DateTime?          @map("opt_out_date")
+  smsOptOut       Boolean            @default(false) @map("sms_opt_out")
+  whatsappOptOut  Boolean            @default(false) @map("whatsapp_opt_out")
+  analyticsEvents AnalyticsEvent[]
+  botSessions     BotSession[]
+  deliveries      CampaignDelivery[]
+  campaignMembers CampaignMember[]
+  chatHistory     ChatHistory[]
+  keywords        ContactKeyword[]
+  account         Account?           @relation(fields: [accountId], references: [id])
+  formSubmissions FormSubmission[]
+  convertedLeads  Lead[]             @relation("ConvertedLead")
+  // Opportunity-Quote-Order relations
+  opportunities   Opportunity[]
+  quotes          Quote[]
+  salesOrders     SalesOrder[]
+
+  @@map("contacts")
+}
+
+model SalesUserOTP {
+  id        Int       @id @default(autoincrement())
+  userId    Int?      @map("user_id")
+  phone     String
+  otpHash   String    @map("otp_hash")
+  expiresAt DateTime  @map("expires_at")
+  attempts  Int       @default(0)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([phone])
+  @@index([userId])
+  @@map("sales_user_otps")
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  otpHash   String    @map("otp_hash")
+  expiresAt DateTime  @map("expires_at")
+  attempts  Int       @default(0)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+model Lead {
+  id                   Int                @id @default(autoincrement())
+  email                String
+  phone                String?
+  createdAt            DateTime           @default(now()) @map("created_at")
+  convertedToContactId Int?               @map("converted_to_contact_id")
+  ownerId              Int?               @map("owner_id")
+  score                Int                @default(0)
+  companyName          String?            @map("company_name")
+  completenessScore    Int                @default(0) @map("completeness_score")
+  invalidFields        String[]           @default([]) @map("invalid_fields")
+  missingFields        String[]           @default([]) @map("missing_fields")
+  qualityScore         Int                @default(0) @map("quality_score")
+  brevoContactId       String?            @map("brevo_contact_id")
+  source               LeadSource?
+  status               LeadStatus?
+  city                 String?
+  pincode              String?
+  state                String?
+  firstName            String             @map("first_name")
+  lastName             String?            @map("last_name")
+  assignedAt           DateTime?          @map("assigned_at")
+  deletedAt            DateTime?          @map("deleted_at")
+  deletedBy            Int?               @map("deleted_by")
+  countryCode          String?            @default("91") @map("country_code")
+  emailOptOut          Boolean            @default(false) @map("email_opt_out")
+  optOutDate           DateTime?          @map("opt_out_date")
+  smsOptOut            Boolean            @default(false) @map("sms_opt_out")
+  whatsappOptOut       Boolean            @default(false) @map("whatsapp_opt_out")
+  analyticsEvents      AnalyticsEvent[]
+  deliveries           CampaignDelivery[]
+  campaignMembers      CampaignMember[]
+  enquiries            Enquiry[]
+  formSubmissions      FormSubmission[]
+  keywords             LeadKeyword[]
+  remarks              LeadRemark[]
+  convertedToContact   Contact?           @relation("ConvertedLead", fields: [convertedToContactId], references: [id])
+  deletedByUser        User?              @relation("LeadDeletedBy", fields: [deletedBy], references: [id])
+  owner                User?              @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  @@index([email])
+  @@index([phone])
+  @@index([deletedAt])
+  @@map("leads")
+}
+
+model LandingPageCampaign {
+  id          Int                       @id @default(autoincrement())
+  name        String
+  description String?
+  uniqueId    String                    @unique @default(cuid()) @map("unique_id")
+  status      LandingPageCampaignStatus @default(ACTIVE)
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  updatedAt   DateTime                  @updatedAt @map("updated_at")
+  createdBy   Int?                      @map("created_by")
+  enquiries   Enquiry[]
+  creator     User?                     @relation("LandingPageCampaignCreator", fields: [createdBy], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("landing_page_campaigns")
+}
+
+model Enquiry {
+  id                    Int                  @id @default(autoincrement())
+  leadId                Int                  @map("lead_id")
+  landingPageCampaignId Int?                 @map("landing_page_campaign_id")
+  customFields          Json?                @map("custom_fields")
+  status                EnquiryStatus        @default(UNRESOLVED)
+  enquiryCreatedAt      DateTime             @default(now()) @map("enquiry_created_at")
+  resolvedAt            DateTime?            @map("resolved_at")
+  resolvedBy            Int?                 @map("resolved_by")
+  landingPageCampaign   LandingPageCampaign? @relation(fields: [landingPageCampaignId], references: [id])
+  lead                  Lead                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  resolver              User?                @relation("EnquiryResolver", fields: [resolvedBy], references: [id])
+
+  @@index([leadId])
+  @@index([landingPageCampaignId])
+  @@index([status])
+  @@index([enquiryCreatedAt])
+  @@map("enquiries")
+}
+
+model Campaign {
+  id               Int                     @id @default(autoincrement())
+  name             String
+  description      String?
+  startDate        DateTime                @map("start_date")
+  endDate          DateTime?               @map("end_date")
+  createdBy        Int                     @map("created_by")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  analyticsEvents  AnalyticsEvent[]
+  campaignChannels CampaignChannel[]
+  deliveries       CampaignDelivery[]
+  campaignMembers  CampaignMember[]
+  creator          User                    @relation("CampaignCreator", fields: [createdBy], references: [id])
+  optOuts          OptOut[]
+  whatsappConfig   WhatsAppCampaignConfig?
+
+  @@map("campaigns")
+}
+
+model CampaignMember {
+  id         Int                @id @default(autoincrement())
+  campaignId Int                @map("campaign_id")
+  contactId  Int?               @map("contact_id")
+  leadId     Int?               @map("lead_id")
+  status     String
+  joinedAt   DateTime           @default(now()) @map("joined_at")
+  deliveries CampaignDelivery[]
+  campaign   Campaign           @relation(fields: [campaignId], references: [id])
+  contact    Contact?           @relation(fields: [contactId], references: [id])
+  lead       Lead?              @relation(fields: [leadId], references: [id])
+
+  @@unique([campaignId, contactId, leadId])
+  @@map("campaign_members")
+}
+
+model CampaignChannel {
+  id          Int      @id @default(autoincrement())
+  campaignId  Int      @map("campaign_id")
+  channelType String   @map("channel_type")
+  externalId  String   @map("external_id")
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+
+  @@unique([campaignId, channelType, externalId])
+  @@map("campaign_channel")
+}
+
+model Segment {
+  id                Int                      @id @default(autoincrement())
+  name              String
+  description       String?
+  entityType        SegmentEntityType        @default(CONTACT) @map("entity_type")
+  logicOperator     String?                  @map("logic_operator")
+  filtersJson       Json?                    @map("filters_json")
+  createdBy         Int                      @map("created_by")
+  updatedBy         Int?                     @map("updated_by")
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+  deliveries        CampaignDelivery[]
+  rules             SegmentRule[]
+  creator           User                     @relation("SegmentCreator", fields: [createdBy], references: [id])
+  updater           User?                    @relation("SegmentUpdater", fields: [updatedBy], references: [id])
+  whatsappCampaigns WhatsAppCampaignConfig[] @relation("SegmentCampaigns")
+
+  @@unique([name, entityType])
+  @@map("segments")
+}
+
+model SegmentRule {
+  id        Int             @id @default(autoincrement())
+  segmentId Int             @map("segment_id")
+  ruleType  SegmentRuleType @map("rule_type")
+  operator  String
+  value     Json?
+  createdAt DateTime        @default(now()) @map("created_at")
+  segment   Segment         @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@map("segment_rules")
+}
+
+model WhatsAppNumber {
+  id              Int                      @id @default(autoincrement())
+  displayName     String                   @map("display_name")
+  phoneNumber     String                   @unique @map("phone_number")
+  provider        String                   @default("MSG91")
+  businessId      String?                  @map("business_id")
+  senderId        String?                  @map("sender_id")
+  encryptedApiKey String                   @map("encrypted_api_key")
+  iv              String
+  authTag         String                   @map("auth_tag")
+  maskedTail      String?                  @map("masked_tail")
+  metadata        Json?
+  status          String?                  @default("ACTIVE")
+  createdBy       Int?                     @map("created_by")
+  updatedBy       Int?                     @map("updated_by")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+  deliveries      CampaignDelivery[]
+  campaignConfigs WhatsAppCampaignConfig[]
+  creator         User?                    @relation("WhatsAppNumberCreator", fields: [createdBy], references: [id])
+  updater         User?                    @relation("WhatsAppNumberUpdater", fields: [updatedBy], references: [id])
+  templates       WhatsAppTemplate[]
+
+  @@map("whatsapp_numbers")
+}
+
+model WhatsAppTemplate {
+  id                 Int                      @id @default(autoincrement())
+  whatsappNumberId   Int                      @map("whatsapp_number_id")
+  providerTemplateId String                   @map("provider_template_id")
+  name               String
+  language           String
+  category           String?
+  status             String
+  components         Json?
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  lastSyncedAt       DateTime?                @map("last_synced_at")
+  isArchived         Boolean                  @default(false) @map("is_archived")
+  campaignConfigs    WhatsAppCampaignConfig[]
+  whatsappNumber     WhatsAppNumber           @relation(fields: [whatsappNumberId], references: [id], onDelete: Cascade)
+
+  @@unique([whatsappNumberId, providerTemplateId])
+  @@unique([whatsappNumberId, name])
+  @@map("whatsapp_templates")
+}
+
+model WhatsAppCampaignConfig {
+  id               Int              @id @default(autoincrement())
+  campaignId       Int              @unique @map("campaign_id")
+  whatsappNumberId Int              @map("whatsapp_number_id")
+  templateId       Int              @map("template_id")
+  segmentId        Int?             @map("segment_id")
+  messageParams    Json?            @map("message_params")
+  scheduledAt      DateTime?        @map("scheduled_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  language         String?          @map("language")
+  batchSize        Int              @default(100) @map("batch_size")
+  campaign         Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  segment          Segment?         @relation("SegmentCampaigns", fields: [segmentId], references: [id])
+  template         WhatsAppTemplate @relation(fields: [templateId], references: [id])
+  whatsappNumber   WhatsAppNumber   @relation(fields: [whatsappNumberId], references: [id])
+
+  @@map("whatsapp_campaign_configs")
+}
+
+model CampaignDelivery {
+  id                Int                    @id @default(autoincrement())
+  campaignId        Int                    @map("campaign_id")
+  campaignMemberId  Int?                   @map("campaign_member_id")
+  contactId         Int?                   @map("contact_id")
+  leadId            Int?                   @map("lead_id")
+  whatsappNumberId  Int?                   @map("whatsapp_number_id")
+  segmentId         Int?                   @map("segment_id")
+  channel           String
+  address           String
+  status            CampaignDeliveryStatus @default(PENDING)
+  errorCode         String?                @map("error_code")
+  errorMessage      String?                @map("error_message")
+  providerMessageId String?                @map("provider_message_id")
+  sentAt            DateTime?              @map("sent_at")
+  deliveredAt       DateTime?              @map("delivered_at")
+  readAt            DateTime?              @map("read_at")
+  failedAt          DateTime?              @map("failed_at")
+  webhookPayload    Json?                  @map("webhook_payload")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+  csvData           Json?                  @map("csv_data")
+  campaign          Campaign               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignMember    CampaignMember?        @relation(fields: [campaignMemberId], references: [id])
+  contact           Contact?               @relation(fields: [contactId], references: [id])
+  lead              Lead?                  @relation(fields: [leadId], references: [id])
+  segment           Segment?               @relation(fields: [segmentId], references: [id])
+  whatsappNumber    WhatsAppNumber?        @relation(fields: [whatsappNumberId], references: [id])
+  webhookEvents     WebhookEvent[]
+
+  @@map("campaign_deliveries")
+}
+
+model WebhookEvent {
+  id                 Int               @id @default(autoincrement())
+  provider           String
+  eventType          String            @map("event_type")
+  payload            Json
+  correlationId      String?           @map("correlation_id")
+  processed          Boolean           @default(false)
+  processedAt        DateTime?         @map("processed_at")
+  campaignDeliveryId Int?              @map("campaign_delivery_id")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  campaignDelivery   CampaignDelivery? @relation(fields: [campaignDeliveryId], references: [id])
+
+  @@map("webhook_events")
+}
+
+model OptOut {
+  id         Int       @id @default(autoincrement())
+  phone      String
+  channel    String    @default("whatsapp")
+  optedOutAt DateTime  @default(now()) @map("opted_out_at")
+  source     String?
+  campaignId Int?      @map("campaign_id")
+  reason     String?
+  metadata   Json?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  campaign   Campaign? @relation(fields: [campaignId], references: [id])
+
+  @@unique([phone, channel])
+  @@index([phone])
+  @@index([channel])
+  @@index([optedOutAt])
+  @@map("opt_outs")
+}
+
+model AnalyticsEvent {
+  id         Int      @id @default(autoincrement())
+  campaignId Int      @map("campaign_id")
+  contactId  Int?     @map("contact_id")
+  leadId     Int?     @map("lead_id")
+  eventType  String   @map("event_type")
+  eventData  Json     @map("event_data")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  contact    Contact? @relation(fields: [contactId], references: [id])
+  lead       Lead?    @relation(fields: [leadId], references: [id])
+
+  @@map("analytics_events")
+}
+
+model BotSession {
+  id          Int           @id @default(autoincrement())
+  contactId   Int           @map("contact_id")
+  userId      Int           @map("user_id")
+  startedAt   DateTime      @map("started_at")
+  endedAt     DateTime?     @map("ended_at")
+  status      String
+  contact     Contact       @relation(fields: [contactId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+  chatHistory ChatHistory[]
+
+  @@map("bot_sessions")
+}
+
+model ChatHistory {
+  id        Int        @id @default(autoincrement())
+  contactId Int        @map("contact_id")
+  sessionId Int        @map("session_id")
+  message   String
+  sender    String
+  createdAt DateTime   @default(now()) @map("created_at")
+  contact   Contact    @relation(fields: [contactId], references: [id])
+  session   BotSession @relation(fields: [sessionId], references: [id])
+
+  @@map("chat_history")
+}
+
+model KnowledgeBase {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  sourceUrl String?  @map("source_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("knowledge_base")
+}
+
+model CustomField {
+  id         Int      @id @default(autoincrement())
+  entityType String   @map("entity_type")
+  entityId   Int      @map("entity_id")
+  fields     Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([entityType, entityId])
+  @@map("custom_fields")
+}
+
+model AuditLog {
+  id            Int            @id @default(autoincrement())
+  entityType    String         @map("entity_type")
+  entityId      Int            @map("entity_id")
+  changedBy     Int            @map("changed_by")
+  action        String
+  oldValues     Json?          @map("old_values")
+  newValues     Json?          @map("new_values")
+  changedAt     DateTime       @default(now()) @map("changed_at")
+  category      AuditCategory? @default(CAMPAIGN_MANAGEMENT)
+  subCategory   String?        @map("sub_category")
+  changedByUser User           @relation("AuditLogUser", fields: [changedBy], references: [id])
+
+  @@index([category])
+  @@map("audit_logs")
+}
+
+model LeadAssignmentRule {
+  id             Int      @id @default(autoincrement())
+  name           String
+  criteria       Json
+  assignedUserId Int      @map("assigned_user_id")
+  priority       Int
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  assignedUser   User     @relation(fields: [assignedUserId], references: [id])
+
+  @@map("lead_assignment_rules")
+}
+
+model FormSubmission {
+  id          Int      @id @default(autoincrement())
+  leadId      Int?     @map("lead_id")
+  contactId   Int?     @map("contact_id")
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  formData    Json     @map("form_data")
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+
+  @@map("form_submissions")
+}
+
+model LeadRemark {
+  id        Int      @id @default(autoincrement())
+  leadId    Int      @map("lead_id")
+  userId    Int      @map("user_id")
+  remark    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User     @relation("LeadRemarkAuthor", fields: [userId], references: [id])
+
+  @@index([leadId])
+  @@index([userId])
+  @@map("lead_remarks")
+}
+
+model Subdealer {
+  id               Int            @id @default(autoincrement())
+  phone            String         @unique
+  gstNumber        String         @unique @map("gst_number")
+  email            String?
+  legalName        String         @map("legal_name")
+  tradeName        String?        @map("trade_name")
+  address          String?
+  city             String?
+  state            String?
+  pincode          String?
+  panNumber        String?        @map("pan_number")
+  registrationDate DateTime?      @map("registration_date")
+  businessType     String?        @map("business_type")
+  status           String?
+  jurisdiction     String?
+  phoneVerified    Boolean        @default(false) @map("phone_verified")
+  verifiedAt       DateTime?      @map("verified_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  jwtToken         String?        @map("jwt_token")
+  tokenIssuedAt    DateTime?      @map("token_issued_at")
+  invoices         Invoice[]
+  otpRecords       SubdealerOTP[]
+
+  @@map("subdealers")
+}
+
+model SubdealerOTP {
+  id          Int        @id @default(autoincrement())
+  subdealerId Int?       @map("subdealer_id")
+  phone       String
+  otpHash     String     @map("otp_hash")
+  expiresAt   DateTime   @map("expires_at")
+  attempts    Int        @default(0)
+  usedAt      DateTime?  @map("used_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  subdealer   Subdealer? @relation(fields: [subdealerId], references: [id], onDelete: Cascade)
+
+  @@index([phone])
+  @@index([subdealerId])
+  @@map("subdealer_otps")
+}
+
+model Invoice {
+  id         Int              @id @default(autoincrement())
+  pdfUrl     String           @map("pdf_url")
+  uploadedBy Int              @map("uploaded_by")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+  category   InvoiceCategory? @default(PENDING)
+  status     String?          @default("pending")
+  subdealer  Subdealer        @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([uploadedBy])
+  @@index([category])
+  @@map("invoices")
+}
+
+model Order {
+  id             Int               @id @default(autoincrement())
+  totalAmount    Decimal?          @map("total_amount") @db.Decimal(10, 2)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  orderNumber    String            @unique @map("order_number")
+  city           String?
+  contactNumber  String?           @map("contact_number")
+  email          String?
+  firmName       String?           @map("firm_name")
+  ownerFirstName String?           @map("owner_first_name")
+  ownerLastName  String?           @map("owner_last_name")
+  pincode        String?
+  salesUserId    Int?              @map("sales_user_id")
+  state          String?
+  gst            String?
+  archived       Boolean           @default(false)
+  archivedAt     DateTime?         @map("archived_at")
+  archivedBy     Int?              @map("archived_by")
+  salesUser      User?             @relation("SalesUserOrders", fields: [salesUserId], references: [id])
+  lineItems      ProductLineItem[]
+
+  @@index([salesUserId])
+  @@index([archived])
+  @@map("orders")
+}
+
+model IntegrationCredential {
+  id              String   @id @default(cuid())
+  provider        String   @unique
+  encryptedApiKey String   @map("encrypted_api_key")
+  iv              String
+  authTag         String   @map("auth_tag")
+  maskedTail      String?  @map("masked_tail")
+  updatedByUserId String   @map("updated_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("integration_credentials")
+}
+
+model AppConfig {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  plainValue      String?  @map("plain_value")
+  encryptedValue  String?  @map("encrypted_value")
+  iv              String?
+  authTag         String?  @map("auth_tag")
+  maskedTail      String?  @map("masked_tail")
+  updatedByUserId String   @map("updated_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("app_config")
+}
+
+model Product {
+  id          Int               @id @default(autoincrement())
+  name        String
+  code        String            @unique
+  imageUrl    String?           @map("image_url")
+  description String?
+  categoryId  Int               @map("category_id")
+  active      Boolean           @default(false)
+  component   Boolean           @default(false)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  lineItems   ProductLineItem[]
+  priceBookEntries PriceBookEntry[]
+  productOptions   ProductOption[]
+  category    ProductCategory   @relation(fields: [categoryId], references: [id])
+  // Opportunity-Quote-Order line item relations
+  opportunityLineItems  OpportunityLineItem[]
+  quoteLineItems        QuoteLineItem[]
+  salesOrderLineItems   SalesOrderLineItem[]
+
+  @@index([categoryId])
+  @@index([active])
+  @@map("products")
+}
+
+model PriceBook {
+  id               Int              @id @default(autoincrement())
+  name             String           @unique @map("price_book_name")
+  currencyCode     String           @map("currency_code")
+  isActive         Boolean          @default(true) @map("is_active")
+  description      String?
+  createdAt        DateTime         @default(now()) @map("created_at")
+  // Relations
+  priceBookEntries PriceBookEntry[]
+  currency         Currency         @relation(fields: [currencyCode], references: [code])
+  // Opportunity relation
+  opportunities    Opportunity[]
+
+  @@map("price_books")
+}
+
+model Currency {
+  code    String  @id
+  name    String  @unique
+  symbol  String
+  country String?
+
+  priceBooks PriceBook[]
+
+  @@map("currencies")
+}
+
+model PriceBookEntry {
+  id               Int      @id @default(autoincrement())
+  listPrice        Decimal    @map("list_price")
+  useStandardPrice Boolean  @default(true) @map("use_standard_price")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Foreign keys
+  productId   Int @map("product_id")
+  priceBookId Int @map("price_book_id")
+
+  // Relations
+  product   Product   @relation(fields: [productId], references: [id])
+  priceBook PriceBook @relation(fields: [priceBookId], references: [id])
+  // Opportunity-Quote line item relations
+  opportunityLineItems OpportunityLineItem[]
+  quoteLineItems       QuoteLineItem[]
+
+  @@unique([productId, priceBookId])
+  @@map("price_book_entries")
+}
+
+model ProductOption {
+  id               Int  @id @default(autoincrement())
+  configuredProduct String  @map("configured_product")
+  productOption    String  @map("product_option")
+  sortOrder        Int?    @map("sort_order")
+  required         Boolean @default(false)
+  isActive         Boolean @default(true) @map("is_active")
+  
+  // Foreign keys
+  productId Int? @map("product_id")
+  parentId  Int? @map("parent_id")
+  
+  // Relations
+  product Product? @relation(fields: [productId], references: [id])
+  parent  ProductOption? @relation("ProductOptionHierarchy", fields: [parentId], references: [id])
+  children ProductOption[] @relation("ProductOptionHierarchy")
+  
+  @@map("product_options")
+}
+
+model ProductLineItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int      @map("order_id")
+  productId  Int      @map("product_id")
+  quantity   Int
+  unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
+  totalPrice Decimal  @map("total_price") @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("product_line_items")
+}
+
+model ProductCategory {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  products    Product[]
+
+  @@map("product_categories")
+}
+
+model Keyword {
+  id        Int              @id @default(autoincrement())
+  name      String           @unique
+  createdAt DateTime         @default(now()) @map("created_at")
+  accounts  AccountKeyword[]
+  contacts  ContactKeyword[]
+  leads     LeadKeyword[]
+
+  @@map("keywords")
+}
+
+model LeadKeyword {
+  id        Int      @id @default(autoincrement())
+  leadId    Int      @map("lead_id")
+  keywordId Int      @map("keyword_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, keywordId])
+  @@map("lead_keywords")
+}
+
+model ContactKeyword {
+  id        Int      @id @default(autoincrement())
+  contactId Int      @map("contact_id")
+  keywordId Int      @map("keyword_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, keywordId])
+  @@map("contact_keywords")
+}
+
+model AccountKeyword {
+  id        Int      @id @default(autoincrement())
+  accountId Int      @map("account_id")
+  keywordId Int      @map("keyword_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, keywordId])
+  @@map("account_keywords")
+}
+
+model GlobalSetting {
+  key         String   @id
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("global_settings")
+}
+
+// ============================================
+// OPPORTUNITY-QUOTE-ORDER SALES MODULE MODELS
+// ============================================
+
+model Opportunity {
+  id                  Int                   @id @default(autoincrement())
+  opportunityNumber   String                @unique @map("opportunity_number")
+  name                String
+  description         String?
+  stage               OpportunityStage      @default(PROSPECT)
+  type                OpportunityType?
+  status              OpportunityStatus     @default(DRAFT)
+  amount              Decimal?              @db.Decimal(15, 2)
+  probability         Int                   @default(10)
+  expectedCloseDate   DateTime?             @map("expected_close_date")
+  actualCloseDate     DateTime?             @map("actual_close_date")
+  leadSource          String?               @map("lead_source")
+  nextStep            String?               @map("next_step")
+  lossReason          String?               @map("loss_reason")
+
+  // Foreign keys
+  accountId           Int                   @map("account_id")
+  contactId           Int?                  @map("contact_id")
+  priceBookId         Int?                  @map("price_book_id")
+  ownerId             Int                   @map("owner_id")
+  createdBy           Int                   @map("created_by")
+  deletedBy           Int?                  @map("deleted_by")
+
+  // Timestamps
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  deletedAt           DateTime?             @map("deleted_at")
+
+  // Relations
+  account             Account               @relation(fields: [accountId], references: [id])
+  contact             Contact?              @relation(fields: [contactId], references: [id])
+  priceBook           PriceBook?            @relation(fields: [priceBookId], references: [id])
+  owner               User                  @relation("OpportunityOwner", fields: [ownerId], references: [id])
+  creator             User                  @relation("OpportunityCreator", fields: [createdBy], references: [id])
+  deletedByUser       User?                 @relation("OpportunityDeletedBy", fields: [deletedBy], references: [id])
+  lineItems           OpportunityLineItem[]
+  activities          OpportunityActivity[]
+  quotes              Quote[]
+
+  @@index([accountId])
+  @@index([ownerId])
+  @@index([stage])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("opportunities")
+}
+
+model OpportunityLineItem {
+  id                  Int                   @id @default(autoincrement())
+  opportunityId       Int                   @map("opportunity_id")
+  productId           Int                   @map("product_id")
+  priceBookEntryId    Int?                  @map("price_book_entry_id")
+  quantity            Int                   @default(1)
+  listPrice           Decimal               @map("list_price") @db.Decimal(15, 2)
+  unitPrice           Decimal               @map("unit_price") @db.Decimal(15, 2)
+  discount            Decimal               @default(0) @db.Decimal(5, 2)
+  totalPrice          Decimal               @map("total_price") @db.Decimal(15, 2)
+  description         String?
+  sortOrder           Int                   @default(0) @map("sort_order")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  opportunity         Opportunity           @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  product             Product               @relation(fields: [productId], references: [id])
+  priceBookEntry      PriceBookEntry?       @relation(fields: [priceBookEntryId], references: [id])
+
+  @@index([opportunityId])
+  @@index([productId])
+  @@map("opportunity_line_items")
+}
+
+model OpportunityActivity {
+  id                  Int                   @id @default(autoincrement())
+  opportunityId       Int                   @map("opportunity_id")
+  userId              Int                   @map("user_id")
+  activityType        String                @map("activity_type")
+  description         String
+  oldValue            String?               @map("old_value")
+  newValue            String?               @map("new_value")
+  metadata            Json?
+  createdAt           DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  opportunity         Opportunity           @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  user                User                  @relation("OpportunityActivityUser", fields: [userId], references: [id])
+
+  @@index([opportunityId])
+  @@index([userId])
+  @@index([activityType])
+  @@map("opportunity_activities")
+}
+
+model Quote {
+  id                  Int                   @id @default(autoincrement())
+  quoteNumber         String                @unique @map("quote_number")
+  name                String
+  description         String?
+  status              QuoteStatus           @default(DRAFT)
+  type                QuoteType             @default(QUOTE)
+  version             Int                   @default(1)
+  isPrimary           Boolean               @default(false) @map("is_primary")
+
+  // Pricing
+  subtotal            Decimal               @default(0) @db.Decimal(15, 2)
+  discount            Decimal               @default(0) @db.Decimal(15, 2)
+  discountPercent     Decimal               @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  taxAmount           Decimal               @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  taxPercent          Decimal               @default(0) @map("tax_percent") @db.Decimal(5, 2)
+  shippingAmount      Decimal               @default(0) @map("shipping_amount") @db.Decimal(15, 2)
+  grandTotal          Decimal               @default(0) @map("grand_total") @db.Decimal(15, 2)
+
+  // Dates
+  validUntil          DateTime?             @map("valid_until")
+  approvedAt          DateTime?             @map("approved_at")
+  rejectedAt          DateTime?             @map("rejected_at")
+  presentedAt         DateTime?             @map("presented_at")
+  acceptedAt          DateTime?             @map("accepted_at")
+
+  // Address info (snapshot at quote creation)
+  billingName         String?               @map("billing_name")
+  billingStreet       String?               @map("billing_street")
+  billingCity         String?               @map("billing_city")
+  billingState        String?               @map("billing_state")
+  billingPostalCode   String?               @map("billing_postal_code")
+  billingCountry      String?               @map("billing_country")
+  shippingName        String?               @map("shipping_name")
+  shippingStreet      String?               @map("shipping_street")
+  shippingCity        String?               @map("shipping_city")
+  shippingState       String?               @map("shipping_state")
+  shippingPostalCode  String?               @map("shipping_postal_code")
+  shippingCountry     String?               @map("shipping_country")
+
+  // Terms
+  paymentTerms        String?               @map("payment_terms")
+  deliveryTerms       String?               @map("delivery_terms")
+  notes               String?
+  internalNotes       String?               @map("internal_notes")
+
+  // PDF storage (S3 URL set when quote is sent to client)
+  pdfUrl              String?               @map("pdf_url")
+
+  // Approval/Rejection comments
+  approvalComment     String?               @map("approval_comment")
+  rejectionComment    String?               @map("rejection_comment")
+
+  // Foreign keys
+  opportunityId       Int                   @map("opportunity_id")
+  accountId           Int                   @map("account_id")
+  contactId           Int?                  @map("contact_id")
+  preparedById        Int                   @map("prepared_by_id")
+  approvedById        Int?                  @map("approved_by_id")
+  rejectedById        Int?                  @map("rejected_by_id")
+
+  // Timestamps
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  opportunity         Opportunity           @relation(fields: [opportunityId], references: [id])
+  account             Account               @relation(fields: [accountId], references: [id])
+  contact             Contact?              @relation(fields: [contactId], references: [id])
+  preparedBy          User                  @relation("QuotePreparedBy", fields: [preparedById], references: [id])
+  approvedBy          User?                 @relation("QuoteApprovedBy", fields: [approvedById], references: [id])
+  rejectedBy          User?                 @relation("QuoteDeniedBy", fields: [rejectedById], references: [id])
+  lineItems           QuoteLineItem[]
+  salesOrders         SalesOrder[]
+
+  @@index([opportunityId])
+  @@index([accountId])
+  @@index([status])
+  @@index([isPrimary])
+  @@map("quotes")
+}
+
+model QuoteLineItem {
+  id                  Int                   @id @default(autoincrement())
+  quoteId             Int                   @map("quote_id")
+  productId           Int                   @map("product_id")
+  priceBookEntryId    Int?                  @map("price_book_entry_id")
+  quantity            Int                   @default(1)
+  listPrice           Decimal               @map("list_price") @db.Decimal(15, 2)
+  unitPrice           Decimal               @map("unit_price") @db.Decimal(15, 2)
+  discount            Decimal               @default(0) @db.Decimal(5, 2)
+  totalPrice          Decimal               @map("total_price") @db.Decimal(15, 2)
+  description         String?
+  sortOrder           Int                   @default(0) @map("sort_order")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  quote               Quote                 @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product             Product               @relation(fields: [productId], references: [id])
+  priceBookEntry      PriceBookEntry?       @relation(fields: [priceBookEntryId], references: [id])
+
+  @@index([quoteId])
+  @@index([productId])
+  @@map("quote_line_items")
+}
+
+model SalesOrder {
+  id                  Int                   @id @default(autoincrement())
+  orderNumber         String                @unique @map("order_number")
+  name                String
+  description         String?
+  status              SalesOrderStatus      @default(DRAFT)
+
+  // Pricing (snapshot from quote)
+  subtotal            Decimal               @default(0) @db.Decimal(15, 2)
+  discount            Decimal               @default(0) @db.Decimal(15, 2)
+  discountPercent     Decimal               @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  taxAmount           Decimal               @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  taxPercent          Decimal               @default(0) @map("tax_percent") @db.Decimal(5, 2)
+  shippingAmount      Decimal               @default(0) @map("shipping_amount") @db.Decimal(15, 2)
+  grandTotal          Decimal               @default(0) @map("grand_total") @db.Decimal(15, 2)
+
+  // Dates
+  orderDate           DateTime              @default(now()) @map("order_date")
+  expectedShipDate    DateTime?             @map("expected_ship_date")
+  actualShipDate      DateTime?             @map("actual_ship_date")
+  expectedDeliveryDate DateTime?            @map("expected_delivery_date")
+  actualDeliveryDate  DateTime?             @map("actual_delivery_date")
+  approvedAt          DateTime?             @map("approved_at")
+  cancelledAt         DateTime?             @map("cancelled_at")
+
+  // Address info (snapshot from quote)
+  billingName         String?               @map("billing_name")
+  billingStreet       String?               @map("billing_street")
+  billingCity         String?               @map("billing_city")
+  billingState        String?               @map("billing_state")
+  billingPostalCode   String?               @map("billing_postal_code")
+  billingCountry      String?               @map("billing_country")
+  shippingName        String?               @map("shipping_name")
+  shippingStreet      String?               @map("shipping_street")
+  shippingCity        String?               @map("shipping_city")
+  shippingState       String?               @map("shipping_state")
+  shippingPostalCode  String?               @map("shipping_postal_code")
+  shippingCountry     String?               @map("shipping_country")
+
+  // Terms
+  paymentTerms        String?               @map("payment_terms")
+  deliveryTerms       String?               @map("delivery_terms")
+  notes               String?
+  internalNotes       String?               @map("internal_notes")
+  cancellationReason  String?               @map("cancellation_reason")
+
+  // Foreign keys
+  quoteId             Int                   @map("quote_id")
+  accountId           Int                   @map("account_id")
+  contactId           Int?                  @map("contact_id")
+  ownerId             Int                   @map("owner_id")
+  approvedById        Int?                  @map("approved_by_id")
+
+  // Timestamps
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  quote               Quote                 @relation(fields: [quoteId], references: [id])
+  account             Account               @relation(fields: [accountId], references: [id])
+  contact             Contact?              @relation(fields: [contactId], references: [id])
+  owner               User                  @relation("SalesOrderOwner", fields: [ownerId], references: [id])
+  approvedBy          User?                 @relation("SalesOrderApprovedBy", fields: [approvedById], references: [id])
+  lineItems           SalesOrderLineItem[]
+
+  @@index([quoteId])
+  @@index([accountId])
+  @@index([ownerId])
+  @@index([status])
+  @@map("sales_orders")
+}
+
+model SalesOrderLineItem {
+  id                  Int                   @id @default(autoincrement())
+  salesOrderId        Int                   @map("sales_order_id")
+  productId           Int                   @map("product_id")
+  quantity            Int                   @default(1)
+  listPrice           Decimal               @map("list_price") @db.Decimal(15, 2)
+  unitPrice           Decimal               @map("unit_price") @db.Decimal(15, 2)
+  discount            Decimal               @default(0) @db.Decimal(5, 2)
+  totalPrice          Decimal               @map("total_price") @db.Decimal(15, 2)
+  description         String?
+  sortOrder           Int                   @default(0) @map("sort_order")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  salesOrder          SalesOrder            @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product             Product               @relation(fields: [productId], references: [id])
+
+  @@index([salesOrderId])
+  @@index([productId])
+  @@map("sales_order_line_items")
+}
+
+// ============================================
+// APPROVAL PROCESS MODULE
+// ============================================
+
+model ApprovalProcess {
+  id               Int                  @id @default(autoincrement())
+  targetObjectName ApprovalTargetObject
+  status           ApprovalStatus       @default(PENDING)
+  comment          String?
+  targetRecordId   Int                  @map("target_record_id")
+  requestedToId    Int                  @map("requested_to_id")
+  lastActorId      Int?                 @map("last_actor_id")
+  createdById      Int                  @map("created_by_id")
+  completedDate    DateTime?            @map("completed_date")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  requestedTo      User                 @relation("ApprovalRequestedTo", fields: [requestedToId], references: [id])
+  createdBy        User                 @relation("ApprovalCreatedBy", fields: [createdById], references: [id])
+  lastActor        User?                @relation("ApprovalLastActor", fields: [lastActorId], references: [id])
+
+  @@index([targetObjectName, targetRecordId])
+  @@index([requestedToId])
+  @@index([createdById])
+  @@index([status])
+  @@map("approval_processes")
+}
+
+enum ApprovalTargetObject {
+  OPP
+  QUOTE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum UserRole {
+  SYSTEM_ADMIN
+  ADMIN
+  SALES
+}
+
+enum LeadStatus {
+  OPEN
+  WORKING
+  QUALIFIED
+  UNQUALIFIED
+  NURTURING
+  CONVERTED
+}
+
+enum LeadSource {
+  IMPORT
+  LANDING_PAGE
+  MANUAL
+}
+
+enum LandingPageCampaignStatus {
+  ACTIVE
+  PAUSED
+  SCHEDULED
+  CLOSED
+  ARCHIVED
+}
+
+enum EnquiryStatus {
+  UNRESOLVED
+  RESOLVED
+  IN_PROGRESS
+}
+
+enum Region {
+  SOUTH
+  NORTH
+  EAST
+  WEST_1
+  WEST_2
+  APTOC
+}
+
+enum InvoiceCategory {
+  PENDING
+  DUPLICATE
+  NOT_CLEAR
+  OLD
+  DIFFERENT_CONTRACTOR
+  WITHOUT_GST
+  NON_PROGRAM
+  IRRELEVANT
+  NON_DEALER
+}
+
+enum AuditCategory {
+  CAMPAIGN_MANAGEMENT
+  SALES_MANAGEMENT
+}
+
+enum SegmentEntityType {
+  CONTACT
+  LEAD
+}
+
+enum SegmentRuleType {
+  KEYWORD
+  CITY
+  STATE
+  PINCODE
+}
+
+enum CampaignDeliveryStatus {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  OPTED_OUT
+}
+
+// ============================================
+// OPPORTUNITY-QUOTE-ORDER SALES MODULE ENUMS
+// ============================================
+
+enum OpportunityStage {
+  PROSPECT
+  QUALIFICATION
+  DISCOVERY
+  VALUE_PROPOSITION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum OpportunityType {
+  NEW_CUSTOMER
+  EXISTING_CUSTOMER_UPGRADE
+  EXISTING_CUSTOMER_REPLACEMENT
+  EXISTING_CUSTOMER_DOWNGRADE
+  RENEWAL
+}
+
+
+enum OpportunityStatus {
+  DRAFT
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+  QUOTE_CREATED
+}
+
+enum QuoteStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  PRESENTED
+  ACCEPTED
+}
+
+enum QuoteType {
+  QUOTE
+  RENEWAL
+  AMENDMENT
+  RE_QUOTE
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  IN_FULFILLMENT
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  ON_HOLD
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+enum NotificationType {
+  LEAD_ASSIGNED
+  LEAD_UPDATED
+  APPROVAL_REQUESTED
+  APPROVAL_APPROVED
+  APPROVAL_REJECTED
+  QUOTE_ACCEPTED
+  ORDER_CREATED
+  GENERAL
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(GENERAL)
+  title     String
+  message   String
+  isRead    Boolean          @default(false) @map("is_read")
+  link      String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  readAt    DateTime?        @map("read_at")
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+// ============================================
+// KPT — CHANNEL PARTNERS & INCENTIVES MODULE
+// ============================================
+
+enum PartnerType {
+  DISTRIBUTOR
+  DEALER
+  RETAILER
+}
+
+enum PartnerTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum PartnerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum IncentiveStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum StockStatus {
+  HEALTHY
+  LOW
+  CRITICAL
+  OUT_OF_STOCK
+}
+
+model ChannelPartner {
+  id                 Int           @id @default(autoincrement())
+  code               String        @unique
+  name               String
+  type               PartnerType
+  tier               PartnerTier   @default(BRONZE)
+  status             PartnerStatus @default(ACTIVE)
+  contactName        String        @map("contact_name")
+  contactEmail       String?       @map("contact_email")
+  contactPhone       String        @map("contact_phone")
+  city               String
+  state              String
+  region             String?
+  gstin              String?
+  creditLimit        Float         @default(0) @map("credit_limit")
+  outstandingPayment Float         @default(0) @map("outstanding_payment")
+  currentMonthSales  Float         @default(0) @map("current_month_sales")
+  ytdSales           Float         @default(0) @map("ytd_sales")
+  targetAmount       Float         @default(0) @map("target_amount")
+  notes              String?
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  incentives   PartnerIncentive[]
+  stockEntries StockEntry[]
+
+  @@index([type])
+  @@index([tier])
+  @@index([status])
+  @@map("channel_partners")
+}
+
+model IncentiveSlab {
+  id               Int         @id @default(autoincrement())
+  tier             PartnerTier
+  minSaleAmount    Float       @map("min_sale_amount")
+  maxSaleAmount    Float?      @map("max_sale_amount")
+  incentivePercent Float       @map("incentive_percent")
+  description      String?
+  isActive         Boolean     @default(true) @map("is_active")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@map("incentive_slabs")
+}
+
+model PartnerIncentive {
+  id               Int             @id @default(autoincrement())
+  partnerId        Int             @map("partner_id")
+  partner          ChannelPartner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  period           String          // e.g. "2026-07" (YYYY-MM)
+  salesAmount      Float           @map("sales_amount")
+  incentivePercent Float           @map("incentive_percent")
+  incentiveAmount  Float           @map("incentive_amount")
+  status           IncentiveStatus @default(PENDING)
+  remarks          String?
+  approvedAt       DateTime?       @map("approved_at")
+  paidAt           DateTime?       @map("paid_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  @@index([partnerId])
+  @@index([period])
+  @@index([status])
+  @@map("partner_incentives")
+}
+
+model StockEntry {
+  id          Int            @id @default(autoincrement())
+  partnerId   Int            @map("partner_id")
+  partner     ChannelPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  productName String         @map("product_name")
+  sku         String
+  category    String
+  stockQty    Int            @default(0) @map("stock_qty")
+  minStockQty Int            @default(10) @map("min_stock_qty")
+  reorderQty  Int            @default(20) @map("reorder_qty")
+  unitPrice   Float          @map("unit_price")
+  stockStatus StockStatus    @default(HEALTHY) @map("stock_status")
+  lastUpdated DateTime       @default(now()) @map("last_updated")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@index([partnerId])
+  @@index([sku])
+  @@index([stockStatus])
+  @@map("stock_entries")
+}

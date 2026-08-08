@@ -1,0 +1,46 @@
+{
+  "name": "custom-marketing-crm-suite",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types",
+    "env:switch:local": "node scripts/switch-env.mjs local",
+    "env:switch:production": "node scripts/switch-env.mjs production",
+    "db:generate": "turbo run prisma:generate",
+    "db:migrate": "turbo run prisma:migrate",
+    "db:deploy": "turbo run prisma:deploy",
+    "db:studio": "turbo run prisma:studio",
+    "db:seed": "turbo run prisma:seed",
+    "db:reset": "turbo run prisma:reset",
+    "db:switch:local": "cd packages/db && powershell -ExecutionPolicy Bypass -File switch-db.ps1 local",
+    "db:switch:production": "cd packages/db && powershell -ExecutionPolicy Bypass -File switch-db.ps1 production"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^7.4.2",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.8",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "npm@7.24.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "dependencies": {
+    "@jridgewell/remapping": "^2.3.5",
+    "@radix-ui/react-select": "^2.2.6",
+    "@tanstack/react-query-devtools": "^5.90.2",
+    "jspdf": "^3.0.4",
+    "sonner": "^2.0.7"
+  },
+  "overrides": {
+    "lightningcss": "1.27.0"
+  }
+}
