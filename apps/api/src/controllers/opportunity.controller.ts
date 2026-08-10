@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
-import { Prisma, OpportunityStage, UserRole } from '@prisma/client';
+import { Prisma, OpportunityStage, UserRole, AuditCategory } from '@prisma/client';
 import {
   handleError,
   handleValidationError,
@@ -11,6 +11,7 @@ import {
 import { buildFullName } from '../utils/nameHelpers.js';
 import { OpportunityType } from '@prisma/client';
 import { emailService } from '../services/email.service.js';
+import { recordAuditLog } from '../utils/audit.utils.js';
 
 export class OpportunityController {
   private parseId(id: string | undefined, res: Response, label: string, operation: string): number | null {
@@ -215,6 +216,16 @@ export class OpportunityController {
           contact: { select: { id: true, name: true } },
           owner: { select: { id: true, firstName: true, lastName: true } },
         },
+      });
+
+      await recordAuditLog({
+        action: 'opportunity.create',
+        changedBy: userId,
+        entityType: 'Opportunity',
+        entityId: opportunity.id,
+        newValues: { name: fullOpportunity?.name, opportunityNumber: fullOpportunity?.opportunityNumber, stage: fullOpportunity?.stage, accountId: fullOpportunity?.accountId },
+        category: AuditCategory.SALES_MANAGEMENT,
+        subCategory: 'OPPORTUNITY',
       });
 
       return res.status(201).json({ data: fullOpportunity });
@@ -751,6 +762,17 @@ export class OpportunityController {
         },
       });
 
+      await recordAuditLog({
+        action: 'opportunity.update',
+        changedBy: userId,
+        entityType: 'Opportunity',
+        entityId: opportunityId,
+        oldValues: { name: existing.name, stage: existing.stage, type: existing.type, leadSource: existing.leadSource },
+        newValues: { name: fullOpportunity?.name, stage: fullOpportunity?.stage, type: fullOpportunity?.type, leadSource: fullOpportunity?.leadSource },
+        category: AuditCategory.SALES_MANAGEMENT,
+        subCategory: 'OPPORTUNITY',
+      });
+
       return res.json({ data: fullOpportunity });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -759,7 +781,7 @@ export class OpportunityController {
       handleError(error, res, operation);
     }
   }
-  
+
 
   /**
    * POST /api/opportunities/:id/submit
@@ -1013,7 +1035,17 @@ export class OpportunityController {
           where: { id: opportunityId },
           data: { deletedAt: new Date() },
         });
-  
+
+        await recordAuditLog({
+          action: 'opportunity.delete',
+          changedBy: req.user!.id,
+          entityType: 'Opportunity',
+          entityId: opportunityId,
+          oldValues: { name: existing.name, stage: existing.stage, opportunityNumber: existing.opportunityNumber },
+          category: AuditCategory.SALES_MANAGEMENT,
+          subCategory: 'OPPORTUNITY',
+        });
+
         return res.status(204).send();
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError) {

@@ -1,7 +1,8 @@
 import type { Request, Response } from "express";
 import { prisma } from "@repo/db";
 import { LeadScoringService } from "../services/leadScoring.service.js";
-import { LeadStatus, LeadSource, UserRole, Prisma } from "@prisma/client";
+import { LeadStatus, LeadSource, UserRole, Prisma, AuditCategory } from "@prisma/client";
+import { recordAuditLog } from "../utils/audit.utils.js";
 import {
   handleError,
   handleValidationError,
@@ -399,6 +400,16 @@ export class LeadController {
       console.log("Lead created successfully:");
       console.log(JSON.stringify(lead, null, 2));
       console.log("=== CREATE LEAD COMPLETED ===\n");
+
+      await recordAuditLog({
+        action: 'lead.create',
+        changedBy: req.user!.id,
+        entityType: 'Lead',
+        entityId: lead.id,
+        newValues: { firstName: lead.firstName, lastName: lead.lastName, email: lead.email, status: lead.status, source: lead.source },
+        category: AuditCategory.SALES_MANAGEMENT,
+        subCategory: 'LEAD',
+      });
 
       res.status(201).json({
         lead,
@@ -857,6 +868,18 @@ export class LeadController {
 
       console.log("📤 Sending response with convertedToContactId:", response.lead.convertedToContactId);
       console.log("📤 Full response lead:", JSON.stringify(response.lead, null, 2));
+
+      await recordAuditLog({
+        action: 'lead.update',
+        changedBy: req.user!.id,
+        entityType: 'Lead',
+        entityId: lead.id,
+        oldValues: { firstName: currentLead.firstName, lastName: currentLead.lastName, email: currentLead.email, status: currentLead.status, ownerId: currentLead.ownerId },
+        newValues: { firstName: lead.firstName, lastName: lead.lastName, email: lead.email, status: lead.status, ownerId: lead.ownerId },
+        category: AuditCategory.SALES_MANAGEMENT,
+        subCategory: 'LEAD',
+      });
+
       res.json(response);
     } catch (error: any) {
       console.error("❌ Update Lead Error:", {
@@ -896,6 +919,15 @@ export class LeadController {
           deletedAt: new Date(),
           deletedBy: req.user?.id,
         },
+      });
+
+      await recordAuditLog({
+        action: 'lead.delete',
+        changedBy: req.user!.id,
+        entityType: 'Lead',
+        entityId: parseInt(id),
+        category: AuditCategory.SALES_MANAGEMENT,
+        subCategory: 'LEAD',
       });
 
       res.status(204).send();

@@ -20,28 +20,15 @@ export default function BrandPanel() {
 
         {/* Logo */}
         <div className="flex items-center justify-center">
-          <Image
-            src={kptLogo}
-            alt="KPT Industries Ltd"
-            width={160}
-            height={48}
-            priority
-            onError={(e) => {
-              // Hide broken image, show text fallback
-              const target = e.currentTarget as HTMLImageElement;
-              target.style.display = "none";
-              const fallback = target.nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = "flex";
-            }}
-            className="brightness-0 invert"
-          />
-          {/* Text fallback — hidden by default, shown if image fails */}
-          <span
-            style={{ display: "none" }}
-            className="items-center gap-1 text-2xl font-bold text-white tracking-widest"
-          >
-            ◆ KPT
-          </span>
+          <div className="bg-white rounded-2xl px-6 py-3 shadow-lg">
+            <Image
+              src={kptLogo}
+              alt="KPT Industries Ltd"
+              width={140}
+              height={44}
+              priority
+            />
+          </div>
         </div>
 
         {/* Tagline */}

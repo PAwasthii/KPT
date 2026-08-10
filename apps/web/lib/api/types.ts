@@ -1,3 +1,31 @@
+// Audit Log types
+export interface AuditLogUser {
+  id: number;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
+
+export interface AuditLog {
+  id: number;
+  entityType: string;
+  entityId: number;
+  changedBy: number;
+  action: string;
+  oldValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  changedAt: string;
+  category?: 'CAMPAIGN_MANAGEMENT' | 'SALES_MANAGEMENT' | null;
+  subCategory?: string | null;
+  changedByUser?: AuditLogUser | null;
+}
+
+export interface AuditLogStats {
+  total: number;
+  byCategory: Record<string, number>;
+  last24h: number;
+}
+
 // Base types
 export interface ApiResponse<T> {
   data: T;

@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
+import { AuditCategory } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError, validateRequiredFields } from '../utils/errorHandler.js';
 import { isValidEmail, isValidPhone, isValidName, validateFieldLength } from '../utils/validators.js';
 import { buildFullName } from '../utils/nameHelpers.js';
 import { parsePhoneNumber } from '../utils/phoneHelper.js';
+import { recordAuditLog } from '../utils/audit.utils.js';
 
 export class ContactController {
   async getAllContacts(req: Request, res: Response) {
@@ -119,6 +121,17 @@ export class ContactController {
           account: true
         }
       });
+
+      await recordAuditLog({
+        action: 'contact.create',
+        changedBy: req.user!.id,
+        entityType: 'Contact',
+        entityId: contact.id,
+        newValues: { name: contact.name, email: contact.email, phone: contact.phone, position: contact.position, accountId: contact.accountId },
+        category: AuditCategory.SALES_MANAGEMENT,
+        subCategory: 'CONTACT',
+      });
+
       res.status(201).json(contact);
     } catch (error) {
       handleError(error, res, 'Create contact');
@@ -208,6 +221,8 @@ export class ContactController {
         }
       }
 
+      const existing = await prisma.contact.findUnique({ where: { id: parseInt(id) } });
+
       const contact = await prisma.contact.update({
         where: { id: parseInt(id) },
         data: updateData,
@@ -215,7 +230,18 @@ export class ContactController {
           account: true
         }
       });
-      
+
+      await recordAuditLog({
+        action: 'contact.update',
+        changedBy: req.user!.id,
+        entityType: 'Contact',
+        entityId: contact.id,
+        oldValues: existing ? { name: existing.name, email: existing.email, phone: existing.phone, position: existing.position } : undefined,
+        newValues: { name: contact.name, email: contact.email, phone: contact.phone, position: contact.position },
+        category: AuditCategory.SALES_MANAGEMENT,
+        subCategory: 'CONTACT',
+      });
+
       res.json(contact);
     } catch (error: any) {
       if (error.code === 'P2025') { // Record not found

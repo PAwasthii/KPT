@@ -180,7 +180,7 @@ export function LoginForm({
                   </span>
                   <Input
                     id="email"
-                    type="email"
+                    type="text"
                     placeholder="Enter your username or email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

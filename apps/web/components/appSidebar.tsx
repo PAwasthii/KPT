@@ -32,10 +32,11 @@ import {
   LineChart,
   Trophy,
   BookAIcon,
+  Shield,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useIsAdminRole } from "./guards/RoleGuard";
+import { useIsAdminRole, useIsSystemAdmin } from "./guards/RoleGuard";
 
 function SidebarBrand() {
   const { open } = useSidebar();
@@ -55,6 +56,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
   const isAdmin = useIsAdminRole();
+  const isSystemAdmin = useIsSystemAdmin();
 
   useEffect(() => {
     setIsClient(true);
@@ -213,6 +215,14 @@ export function AppSidebar() {
                 label="User Management"
                 href="/admin/user-management"
                 active={isClient && pathname === "/admin/user-management"}
+              />
+            )}
+            {isSystemAdmin && (
+              <SidebarItem
+                icon={Shield as any}
+                label="Audit Logs"
+                href="/audit-logs"
+                active={isClient && pathname.startsWith("/audit-logs")}
               />
             )}
             <SidebarItem
