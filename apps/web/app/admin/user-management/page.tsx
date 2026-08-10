@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SearchInput, Button, Label, Separator, Checkbox, Input, ConfirmationDialog, Badge } from "@repo/ui";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Filter, ChevronDown, Edit } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Filter, ChevronDown, MoreHorizontal, UserCog } from "lucide-react";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@repo/ui/components/ui/select";
 import {
   Dialog,
@@ -75,6 +75,12 @@ export default function UserManagementPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Manage Access modal state
+  const [isManageAccessOpen, setIsManageAccessOpen] = useState(false);
+  const [manageAccessUser, setManageAccessUser] = useState<User | null>(null);
+  const [manageAccessRole, setManageAccessRole] = useState<string>('SALES');
+  const [updatingRole, setUpdatingRole] = useState(false);
 
   // Import modal state
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -408,6 +414,40 @@ export default function UserManagementPage() {
     }
   };
 
+  const handleOpenManageAccess = (user: User) => {
+    setManageAccessUser(user);
+    setManageAccessRole(user.role);
+    setIsManageAccessOpen(true);
+  };
+
+  const handleUpdateRole = async () => {
+    if (!manageAccessUser || manageAccessRole === manageAccessUser.role) {
+      setIsManageAccessOpen(false);
+      return;
+    }
+    try {
+      setUpdatingRole(true);
+      const op = userService.updateUser(parseInt(manageAccessUser.id), { role: manageAccessRole } as any);
+      toast.promise(op, {
+        loading: 'Updating role...',
+        success: `Role updated to ${manageAccessRole === 'ADMIN' ? 'Admin' : 'Sales'}`,
+        error: (error: any) => {
+          const title = error?.response?.data?.error || 'Failed to update role';
+          const details = error?.response?.data?.details || error?.message;
+          return details && details !== title ? `${title}: ${details}` : title;
+        },
+      });
+      await op;
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      setIsManageAccessOpen(false);
+      setManageAccessUser(null);
+    } catch (_err) {
+      // handled by toast
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -596,14 +636,24 @@ export default function UserManagementPage() {
         key: "actions",
         label: "Actions",
         render: (_v, item) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEditUser(item)}
-            className="h-8 w-8 p-0"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => handleEditUser(item)}>
+                Edit Profile
+              </DropdownMenuItem>
+              {item.role !== 'SYSTEM_ADMIN' && (
+                <DropdownMenuItem onClick={() => handleOpenManageAccess(item)}>
+                  <UserCog className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Manage Access
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       },
     ],
@@ -965,7 +1015,7 @@ export default function UserManagementPage() {
                       <Label htmlFor="email">Email *</Label>
                       <Input
                         id="email"
-                        type="email"
+                        type="text"
                         value={newUser.email}
                         onChange={(e) => {
                           setNewUser(prev => ({ ...prev, email: e.target.value }));
@@ -1211,7 +1261,7 @@ export default function UserManagementPage() {
                     <Label htmlFor="edit-email">Email *</Label>
                     <Input
                       id="edit-email"
-                      type="email"
+                      type="text"
                       value={editingUser.email}
                       onChange={(e) => {
                         setEditingUser(prev => prev ? ({ ...prev, email: e.target.value }) : null);
@@ -1316,24 +1366,22 @@ export default function UserManagementPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="edit-role">Role *</Label>
-                    <Select
-                      value={editingUser.role}
-                      onValueChange={(v) => setEditingUser(prev => prev ? ({ ...prev, role: v }) : null)}
-                      disabled={true}
-                    >
-                      <SelectTrigger className="h-9" id="edit-role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="SALES">Sales</SelectItem>
-                        <SelectItem value="ADMIN">Admin</SelectItem>
-                        <SelectItem value="SYSTEM_ADMIN">System Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Note: User role cannot be changed after creation
-                    </p>
+                    <Label>Role</Label>
+                    <div className="flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
+                      <Badge
+                        variant="secondary"
+                        className={
+                          editingUser.role === 'SYSTEM_ADMIN'
+                            ? 'bg-red-100 text-red-800 hover:bg-red-100'
+                            : editingUser.role === 'ADMIN'
+                            ? 'bg-purple-100 text-purple-800 hover:bg-purple-100'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+                        }
+                      >
+                        {editingUser.role === 'SYSTEM_ADMIN' ? 'System Admin' : editingUser.role === 'ADMIN' ? 'Admin' : 'Sales'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">To change role, use Manage Access</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1357,6 +1405,88 @@ export default function UserManagementPage() {
                   disabled={hasEditErrors || updating}
                 >
                   {updating ? 'Updating...' : 'Update User'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Manage Access Modal */}
+          <Dialog
+            open={isManageAccessOpen}
+            onOpenChange={(open) => {
+              setIsManageAccessOpen(open);
+              if (!open) setManageAccessUser(null);
+            }}
+          >
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <UserCog className="h-5 w-5 text-muted-foreground" />
+                  Manage Access
+                </DialogTitle>
+                <DialogDescription>
+                  Change the access role for this user.
+                </DialogDescription>
+              </DialogHeader>
+
+              {manageAccessUser && (
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                    <p className="font-medium text-sm">{[manageAccessUser.firstName, manageAccessUser.lastName].filter(Boolean).join(' ')}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{manageAccessUser.email}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Current role:</span>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          manageAccessUser.role === 'ADMIN'
+                            ? 'bg-purple-100 text-purple-800 hover:bg-purple-100'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+                        }
+                      >
+                        {manageAccessUser.role === 'ADMIN' ? 'Admin' : 'Sales'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="access-role">New Role</Label>
+                    <Select
+                      value={manageAccessRole}
+                      onValueChange={setManageAccessRole}
+                      disabled={updatingRole}
+                    >
+                      <SelectTrigger className="h-9" id="access-role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SALES">Sales — can view and manage leads</SelectItem>
+                        <SelectItem value="ADMIN">Admin — full CRM access</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {manageAccessRole !== manageAccessUser.role && (
+                    <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                      This will change the user's permissions immediately upon saving.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => { setIsManageAccessOpen(false); setManageAccessUser(null); }}
+                  disabled={updatingRole}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateRole}
+                  disabled={updatingRole || manageAccessRole === manageAccessUser?.role}
+                >
+                  {updatingRole ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </DialogContent>

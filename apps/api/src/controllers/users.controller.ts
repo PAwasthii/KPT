@@ -356,16 +356,31 @@ export class UserController {
         return handleValidationError(res, 'User ID must be a valid number', 'id', 'Update user');
       }
 
-      const updateData = req.body;
+      const updateData = { ...req.body };
 
-      // Prevent role changes - role cannot be modified after user creation
+      // Role changes are restricted: only SYSTEM_ADMIN can change roles
       if (updateData.role !== undefined) {
-        return handleValidationError(
-          res,
-          'User role cannot be changed after creation',
-          'role',
-          'Update user'
-        );
+        const requesterRole = req.user?.role;
+        if (requesterRole !== UserRole.SYSTEM_ADMIN) {
+          return handleValidationError(
+            res,
+            'User role cannot be changed after creation',
+            'role',
+            'Update user'
+          );
+        }
+        // Fetch the target user to prevent changing a SYSTEM_ADMIN's role
+        const targetUser = await prisma.user.findUnique({ where: { id: userId, deletedAt: null } });
+        if (!targetUser) {
+          return handleNotFoundError(res, 'User', 'Update user');
+        }
+        if (targetUser.role === UserRole.SYSTEM_ADMIN) {
+          return handleValidationError(res, 'System Admin role cannot be changed', 'role', 'Update user');
+        }
+        const allowedRoles: UserRole[] = [UserRole.ADMIN, UserRole.SALES];
+        if (!allowedRoles.includes(updateData.role as UserRole)) {
+          return handleValidationError(res, 'Role must be ADMIN or SALES', 'role', 'Update user');
+        }
       }
 
       // Validate firstName if being updated
