@@ -1091,23 +1091,6 @@ export interface UpdateInvoiceCategoryInput {
 // Audit category types
 export type AuditCategory = 'CAMPAIGN_MANAGEMENT' | 'SALES_MANAGEMENT';
 
-export interface AuditLog {
-  id: number;
-  entityType: string;
-  entityId: number;
-  changedBy: number;
-  action: string;
-  oldValues?: Record<string, any>;
-  newValues?: Record<string, any>;
-  category?: AuditCategory;
-  changedAt: string;
-  changedByUser?: {
-    id: number;
-    name?: string;
-    email: string;
-  };
-}
-
 // Subdealer authentication types
 export interface CheckPhoneResponse {
   success: boolean;
