@@ -154,7 +154,14 @@ export function IncentiveTrackerPage() {
   const createIncentive = useCreateIncentive(Number(form.partnerId) || 0);
 
   if (loadingPartners) {
-    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+    return (
+      <div className="p-6 space-y-4">
+        <div className="h-10 w-40 rounded bg-muted animate-pulse" />
+        <div className="rounded-lg border divide-y">
+          {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-12 bg-muted/40 animate-pulse" />)}
+        </div>
+      </div>
+    );
   }
 
   const partners: ChannelPartner[] = partnersData?.data ?? [];

@@ -40,7 +40,17 @@ export function RevenueAnalysisPage() {
   const { data, isLoading } = useRevenueSummary();
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+    return (
+      <div className="p-6 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
+        </div>
+        <div className="h-64 rounded-lg bg-muted animate-pulse" />
+        <div className="rounded-lg border divide-y">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-10 bg-muted/40 animate-pulse" />)}
+        </div>
+      </div>
+    );
   }
 
   const partners: RevenuePartner[] = data?.data ?? [];

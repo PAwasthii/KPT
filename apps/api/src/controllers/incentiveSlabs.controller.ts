@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
+import { AuditCategory } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError } from '../utils/errorHandler.js';
+import { recordAuditLog } from '../utils/audit.utils.js';
 
 export class IncentiveSlabController {
   /**
@@ -68,6 +70,15 @@ export class IncentiveSlabController {
         },
       });
 
+      await recordAuditLog({
+        action: 'INCENTIVE_SLAB_CREATED',
+        changedBy: req.user!.id,
+        entityType: 'IncentiveSlab',
+        entityId: slab.id,
+        newValues: { tier, minSaleAmount: slab.minSaleAmount, maxSaleAmount: slab.maxSaleAmount, incentivePercent: slab.incentivePercent },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
       return res.status(201).json({ success: true, data: slab });
     } catch (error) {
       handleError(error, res, 'Create incentive slab');
@@ -111,6 +122,16 @@ export class IncentiveSlabController {
         },
       });
 
+      await recordAuditLog({
+        action: 'INCENTIVE_SLAB_UPDATED',
+        changedBy: req.user!.id,
+        entityType: 'IncentiveSlab',
+        entityId: existing.id,
+        oldValues: { tier: existing.tier, incentivePercent: existing.incentivePercent, isActive: existing.isActive },
+        newValues: { tier: updated.tier, incentivePercent: updated.incentivePercent, isActive: updated.isActive },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
       return res.json({ success: true, data: updated });
     } catch (error) {
       handleError(error, res, 'Update incentive slab');
@@ -134,6 +155,15 @@ export class IncentiveSlabController {
       }
 
       await prisma.incentiveSlab.delete({ where: { id } });
+
+      await recordAuditLog({
+        action: 'INCENTIVE_SLAB_DELETED',
+        changedBy: req.user!.id,
+        entityType: 'IncentiveSlab',
+        entityId: existing.id,
+        oldValues: { tier: existing.tier, minSaleAmount: existing.minSaleAmount, incentivePercent: existing.incentivePercent },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
 
       return res.json({ success: true, message: 'Incentive slab deleted successfully' });
     } catch (error) {

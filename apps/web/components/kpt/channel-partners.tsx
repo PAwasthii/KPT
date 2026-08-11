@@ -228,7 +228,17 @@ export function ChannelPartnersPage() {
   const updatePartner = useUpdatePartner();
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+    return (
+      <div className="p-6 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
+        </div>
+        <div className="h-10 w-64 rounded bg-muted animate-pulse" />
+        <div className="rounded-lg border divide-y">
+          {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-12 bg-muted/40 animate-pulse" />)}
+        </div>
+      </div>
+    );
   }
 
   const partners: ChannelPartner[] = data?.data ?? [];

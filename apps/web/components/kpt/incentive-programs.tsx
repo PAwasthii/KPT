@@ -199,7 +199,14 @@ export function IncentiveProgramsPage() {
   const deleteSlab = useDeleteIncentiveSlab();
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+    return (
+      <div className="p-6 space-y-4">
+        <div className="h-8 w-48 rounded bg-muted animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-32 rounded-lg bg-muted animate-pulse" />)}
+        </div>
+      </div>
+    );
   }
 
   const slabs: IncentiveSlab[] = data?.data ?? [];

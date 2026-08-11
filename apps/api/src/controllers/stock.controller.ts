@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
+import { AuditCategory } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError } from '../utils/errorHandler.js';
+import { recordAuditLog } from '../utils/audit.utils.js';
 
 /**
  * Compute stock status based on current quantity vs minimum stock quantity.
@@ -199,6 +201,15 @@ export class StockController {
         },
       });
 
+      await recordAuditLog({
+        action: 'STOCK_CREATED',
+        changedBy: req.user!.id,
+        entityType: 'StockEntry',
+        entityId: entry.id,
+        newValues: { partnerId, productName: entry.productName, sku: entry.sku, stockQty: qty, stockStatus },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
       return res.status(201).json({ success: true, data: entry });
     } catch (error) {
       handleError(error, res, 'Create stock entry');
@@ -251,6 +262,16 @@ export class StockController {
         },
       });
 
+      await recordAuditLog({
+        action: 'STOCK_UPDATED',
+        changedBy: req.user!.id,
+        entityType: 'StockEntry',
+        entityId: existing.id,
+        oldValues: { stockQty: existing.stockQty, stockStatus: existing.stockStatus },
+        newValues: { stockQty: newQty, stockStatus },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
       return res.json({ success: true, data: updated });
     } catch (error) {
       handleError(error, res, 'Update stock entry');
@@ -274,6 +295,15 @@ export class StockController {
       }
 
       await prisma.stockEntry.delete({ where: { id } });
+
+      await recordAuditLog({
+        action: 'STOCK_DELETED',
+        changedBy: req.user!.id,
+        entityType: 'StockEntry',
+        entityId: existing.id,
+        oldValues: { productName: existing.productName, sku: existing.sku, stockQty: existing.stockQty },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
 
       return res.json({ success: true, message: 'Stock entry deleted successfully' });
     } catch (error) {

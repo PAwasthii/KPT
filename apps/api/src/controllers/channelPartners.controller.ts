@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
+import { AuditCategory } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError } from '../utils/errorHandler.js';
+import { recordAuditLog } from '../utils/audit.utils.js';
 
 export class ChannelPartnerController {
   /**
@@ -150,6 +152,15 @@ export class ChannelPartnerController {
         },
       });
 
+      await recordAuditLog({
+        action: 'PARTNER_CREATED',
+        changedBy: req.user!.id,
+        entityType: 'ChannelPartner',
+        entityId: partner.id,
+        newValues: { code: partner.code, name: partner.name, type: partner.type, tier: partner.tier, city: partner.city, state: partner.state },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
       return res.status(201).json({ success: true, data: partner });
     } catch (error) {
       handleError(error, res, 'Create channel partner');
@@ -217,6 +228,16 @@ export class ChannelPartnerController {
         },
       });
 
+      await recordAuditLog({
+        action: 'PARTNER_UPDATED',
+        changedBy: req.user!.id,
+        entityType: 'ChannelPartner',
+        entityId: id,
+        oldValues: { name: existing.name, tier: existing.tier, status: existing.status, city: existing.city },
+        newValues: { name: updated.name, tier: updated.tier, status: updated.status, city: updated.city },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
       return res.json({ success: true, data: updated });
     } catch (error) {
       handleError(error, res, 'Update channel partner');
@@ -240,6 +261,15 @@ export class ChannelPartnerController {
       }
 
       await prisma.channelPartner.delete({ where: { id } });
+
+      await recordAuditLog({
+        action: 'PARTNER_DELETED',
+        changedBy: req.user!.id,
+        entityType: 'ChannelPartner',
+        entityId: id,
+        oldValues: { name: existing.name, code: existing.code, type: existing.type, tier: existing.tier },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
 
       return res.json({ success: true, message: 'Channel partner deleted successfully' });
     } catch (error) {
@@ -320,6 +350,15 @@ export class ChannelPartnerController {
         },
       });
 
+      await recordAuditLog({
+        action: 'INCENTIVE_CREATED',
+        changedBy: req.user!.id,
+        entityType: 'PartnerIncentive',
+        entityId: incentive.id,
+        newValues: { partnerId: id, partnerName: partner.name, period, salesAmount, incentivePercent, incentiveAmount: incentive.incentiveAmount, status: incentive.status },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
       return res.status(201).json({ success: true, data: incentive });
     } catch (error) {
       handleError(error, res, 'Create partner incentive');
@@ -366,6 +405,16 @@ export class ChannelPartnerController {
           ...(status === 'APPROVED' && !approvedAt && { approvedAt: new Date() }),
           ...(status === 'PAID' && !paidAt && { paidAt: new Date() }),
         },
+      });
+
+      await recordAuditLog({
+        action: 'INCENTIVE_UPDATED',
+        changedBy: req.user!.id,
+        entityType: 'PartnerIncentive',
+        entityId: incentiveId,
+        oldValues: { status: existing.status, salesAmount: existing.salesAmount, remarks: existing.remarks },
+        newValues: { status: updated.status, salesAmount: updated.salesAmount, remarks: updated.remarks },
+        category: AuditCategory.SALES_MANAGEMENT,
       });
 
       return res.json({ success: true, data: updated });
