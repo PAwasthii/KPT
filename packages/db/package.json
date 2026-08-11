@@ -14,9 +14,9 @@
     }
   },
   "scripts": {
-    "build": "dotenv -e ../../.env -- prisma generate && tsc -p tsconfig.json",
-    "prepare": "dotenv -e ../../.env -- prisma generate && tsc -p tsconfig.json",
-    "prisma:generate": "dotenv -e ../../.env -- prisma generate",
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "prepare": "prisma generate && tsc -p tsconfig.json",
+    "prisma:generate": "prisma generate",
     "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "prisma:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "prisma:studio": "dotenv -e ../../.env -- prisma studio",

@@ -1,0 +1,128 @@
+services:
+  # ──────────────────────────────────────────────
+  # API — Express.js backend
+  # ──────────────────────────────────────────────
+  - type: web
+    name: innocrm-api
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npx turbo run build --filter=api
+    preDeployCommand: npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
+    startCommand: node apps/api/dist/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Database — fill in Render dashboard
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+
+      # Auth
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: ENCRYPTION_KEY
+        sync: false
+
+      # Admin / developer login
+      - key: ADMIN_SECRET
+        sync: false
+      - key: TEST_ADMIN_SECRET
+        sync: false
+      - key: DEVELOPER_LOGIN_EMAIL
+        sync: false
+      - key: DEVELOPER_LOGIN_PASSWORD
+        sync: false
+      - key: DEVELOPER_LOGIN_NAME
+        sync: false
+
+      # CORS — set to your Render web service URL once deployed
+      - key: FRONTEND_URL
+        sync: false
+
+      # AWS S3
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+
+      # MSG91 WhatsApp / SMS
+      - key: MSG91_BASE_URL
+        sync: false
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_OTP_TEMPLATE_ID
+        sync: false
+
+      # Plunk email
+      - key: PLUNK_API_KEY
+        sync: false
+      - key: PLUNK_FROM_EMAIL
+        sync: false
+      - key: PLUNK_FROM_NAME
+        sync: false
+
+      # Brevo email
+      - key: BREVO_BASE_URL
+        sync: false
+      - key: BREVO_WEBHOOK_SECRET
+        sync: false
+
+      # GST validation
+      - key: GST_API_URL
+        sync: false
+      - key: GST_API_KEY
+        sync: false
+      - key: GSTIN_CHECK_API_KEY
+        sync: false
+
+      # LandingI webhook
+      - key: LANDINGI_WEBHOOK_SECRET
+        sync: false
+
+      # Keep-alive token (optional)
+      - key: KEEPALIVE_TOKEN
+        sync: false
+
+      # WhatsApp scheduler interval in ms (default: 60000)
+      - key: WHATSAPP_SCHEDULER_INTERVAL_MS
+        value: "60000"
+
+  # ──────────────────────────────────────────────
+  # Web — Next.js frontend
+  # ──────────────────────────────────────────────
+  - type: web
+    name: innocrm-web
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npx turbo run build --filter=web
+    startCommand: npx next start apps/web
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # API URL — set to your Render API service URL once deployed
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+
+      # Branding
+      - key: NEXT_PUBLIC_COMPANY_NAME
+        value: KPT
+
+      # Feature flags
+      - key: NEXT_PUBLIC_WHATSAPP_TEXT_ONLY_MVP
+        sync: false
+      - key: NEXT_PUBLIC_ALLOW_AUTH_TEMPLATES
+        sync: false
+      - key: NEXT_PUBLIC_ALLOW_UTILITY_TEMPLATES
+        sync: false

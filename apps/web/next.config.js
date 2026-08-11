@@ -29,9 +29,7 @@ const nextConfig = {
 
   // Image optimization configuration
   images: {
-    // Enable image optimization with Sharp (works perfectly on Vercel)
     formats: ["image/webp", "image/avif"],
-    // Configure remote patterns for external images (S3, Cloudinary, etc.)
     remotePatterns: [
       {
         protocol: 'https',
@@ -49,10 +47,6 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-    // Sharp-based on-the-fly optimization doesn't run on Cloudflare Workers.
-    // Serve images as-is (still works everywhere, just no server resizing)
-    // unless/until a Cloudflare Images loader is wired up.
-    unoptimized: true,
   },
 
   // Server configuration
