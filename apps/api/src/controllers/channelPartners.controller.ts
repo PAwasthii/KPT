@@ -65,7 +65,7 @@ export class ChannelPartnerController {
    */
   async getById(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id ?? '');
       if (!id || isNaN(id)) {
         return handleValidationError(res, 'Partner ID is required', 'id', 'Get channel partner');
       }
@@ -173,7 +173,7 @@ export class ChannelPartnerController {
    */
   async update(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id ?? '');
       if (!id || isNaN(id)) {
         return handleValidationError(res, 'Partner ID is required', 'id', 'Update channel partner');
       }
@@ -250,7 +250,7 @@ export class ChannelPartnerController {
    */
   async delete(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id ?? '');
       if (!id || isNaN(id)) {
         return handleValidationError(res, 'Partner ID is required', 'id', 'Delete channel partner');
       }
@@ -283,7 +283,7 @@ export class ChannelPartnerController {
    */
   async getIncentives(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id ?? '');
       if (!id || isNaN(id)) {
         return handleValidationError(res, 'Partner ID is required', 'id', 'Get partner incentives');
       }
@@ -310,7 +310,7 @@ export class ChannelPartnerController {
    */
   async createIncentive(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id ?? '');
       if (!id || isNaN(id)) {
         return handleValidationError(res, 'Partner ID is required', 'id', 'Create partner incentive');
       }
@@ -371,7 +371,7 @@ export class ChannelPartnerController {
    */
   async updateIncentive(req: Request, res: Response) {
     try {
-      const incentiveId = parseInt(req.params.incentiveId);
+      const incentiveId = parseInt(req.params.incentiveId ?? '');
       if (!incentiveId || isNaN(incentiveId)) {
         return handleValidationError(res, 'Incentive ID is required', 'incentiveId', 'Update incentive');
       }

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
-import { AuditCategory } from '@prisma/client';
+import { AuditCategory, StockStatus } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError } from '../utils/errorHandler.js';
 import { recordAuditLog } from '../utils/audit.utils.js';
 
@@ -11,11 +11,11 @@ import { recordAuditLog } from '../utils/audit.utils.js';
  * LOW:          qty > 5 and qty < minStockQty
  * HEALTHY:      qty >= minStockQty
  */
-function computeStockStatus(stockQty: number, minStockQty: number): string {
-  if (stockQty === 0) return 'OUT_OF_STOCK';
-  if (stockQty <= 5) return 'CRITICAL';
-  if (stockQty < minStockQty) return 'LOW';
-  return 'HEALTHY';
+function computeStockStatus(stockQty: number, minStockQty: number): StockStatus {
+  if (stockQty === 0) return StockStatus.OUT_OF_STOCK;
+  if (stockQty <= 5) return StockStatus.CRITICAL;
+  if (stockQty < minStockQty) return StockStatus.LOW;
+  return StockStatus.HEALTHY;
 }
 
 export class StockController {
@@ -128,8 +128,8 @@ export class StockController {
    */
   async getByPartner(req: Request, res: Response) {
     try {
-      const { partnerId } = req.params;
-      if (!partnerId) {
+      const partnerId = parseInt(req.params.partnerId ?? '');
+      if (!partnerId || isNaN(partnerId)) {
         return handleValidationError(res, 'Partner ID is required', 'partnerId', 'Get stock by partner');
       }
 
@@ -222,12 +222,12 @@ export class StockController {
    */
   async update(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      if (!id) {
+      const stockId = parseInt(req.params.id ?? '');
+      if (!stockId || isNaN(stockId)) {
         return handleValidationError(res, 'Stock entry ID is required', 'id', 'Update stock entry');
       }
 
-      const existing = await prisma.stockEntry.findUnique({ where: { id } });
+      const existing = await prisma.stockEntry.findUnique({ where: { id: stockId } });
       if (!existing) {
         return handleNotFoundError(res, 'Stock entry', 'Update stock entry');
       }
@@ -248,7 +248,7 @@ export class StockController {
       const stockStatus = computeStockStatus(newQty, newMinQty);
 
       const updated = await prisma.stockEntry.update({
-        where: { id },
+        where: { id: stockId },
         data: {
           ...(productName !== undefined && { productName: productName.trim() }),
           ...(sku !== undefined && { sku: sku.trim() }),
@@ -284,17 +284,17 @@ export class StockController {
    */
   async delete(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      if (!id) {
+      const stockId = parseInt(req.params.id ?? '');
+      if (!stockId || isNaN(stockId)) {
         return handleValidationError(res, 'Stock entry ID is required', 'id', 'Delete stock entry');
       }
 
-      const existing = await prisma.stockEntry.findUnique({ where: { id } });
+      const existing = await prisma.stockEntry.findUnique({ where: { id: stockId } });
       if (!existing) {
         return handleNotFoundError(res, 'Stock entry', 'Delete stock entry');
       }
 
-      await prisma.stockEntry.delete({ where: { id } });
+      await prisma.stockEntry.delete({ where: { id: stockId } });
 
       await recordAuditLog({
         action: 'STOCK_DELETED',

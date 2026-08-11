@@ -123,10 +123,11 @@ export class PerformanceController {
       }
 
       for (const inc of incentives) {
-        if (periodMap[inc.period]) {
-          periodMap[inc.period].totalSales += Number(inc.salesAmount ?? 0);
-          periodMap[inc.period].totalIncentive += Number(inc.incentiveAmount ?? 0);
-          periodMap[inc.period].count += 1;
+        const entry = periodMap[inc.period];
+        if (entry) {
+          entry.totalSales += Number(inc.salesAmount ?? 0);
+          entry.totalIncentive += Number(inc.incentiveAmount ?? 0);
+          entry.count += 1;
         }
       }
 

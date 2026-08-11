@@ -91,12 +91,12 @@ export class IncentiveSlabController {
    */
   async update(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      if (!id) {
+      const slabId = parseInt(req.params.id ?? '');
+      if (!slabId || isNaN(slabId)) {
         return handleValidationError(res, 'Slab ID is required', 'id', 'Update incentive slab');
       }
 
-      const existing = await prisma.incentiveSlab.findUnique({ where: { id } });
+      const existing = await prisma.incentiveSlab.findUnique({ where: { id: slabId } });
       if (!existing) {
         return handleNotFoundError(res, 'Incentive slab', 'Update incentive slab');
       }
@@ -111,7 +111,7 @@ export class IncentiveSlabController {
       } = req.body;
 
       const updated = await prisma.incentiveSlab.update({
-        where: { id },
+        where: { id: slabId },
         data: {
           ...(tier !== undefined && { tier }),
           ...(minSaleAmount !== undefined && { minSaleAmount: Number(minSaleAmount) }),
@@ -144,17 +144,17 @@ export class IncentiveSlabController {
    */
   async delete(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      if (!id) {
+      const slabId = parseInt(req.params.id ?? '');
+      if (!slabId || isNaN(slabId)) {
         return handleValidationError(res, 'Slab ID is required', 'id', 'Delete incentive slab');
       }
 
-      const existing = await prisma.incentiveSlab.findUnique({ where: { id } });
+      const existing = await prisma.incentiveSlab.findUnique({ where: { id: slabId } });
       if (!existing) {
         return handleNotFoundError(res, 'Incentive slab', 'Delete incentive slab');
       }
 
-      await prisma.incentiveSlab.delete({ where: { id } });
+      await prisma.incentiveSlab.delete({ where: { id: slabId } });
 
       await recordAuditLog({
         action: 'INCENTIVE_SLAB_DELETED',
