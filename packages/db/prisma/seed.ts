@@ -12,7 +12,7 @@ import {
   QuoteType,
   SalesOrderStatus,
 } from "@prisma/client";
-import { PartnerType, PartnerTier, PartnerStatus, IncentiveStatus, StockStatus } from '@prisma/client';
+import { PartnerType, PartnerTier, PartnerStatus, IncentiveStatus, StockStatus, AuditCategory } from '@prisma/client';
 
 // Use DIRECT_URL for seeding to avoid PgBouncer prepared statement issues
 const prisma = new PrismaClient({
@@ -1440,6 +1440,148 @@ async function main() {
   }
 
   console.log(`  ✓ Seeded ${kptPartners.length} channel partners with stock and incentive records`);
+
+  // Fetch back actual IDs so audit logs reference real entities
+  const kptPartnerIds = kptPartners.map(p => p.id);
+  const [seedStockEntries, seedIncentives, seedSlabs] = await Promise.all([
+    prisma.stockEntry.findMany({ where: { partnerId: { in: kptPartnerIds } }, orderBy: { id: 'asc' } }),
+    prisma.partnerIncentive.findMany({ where: { partnerId: { in: kptPartnerIds } }, orderBy: [{ partnerId: 'asc' }, { period: 'asc' }] }),
+    prisma.incentiveSlab.findMany({ orderBy: { id: 'asc' } }),
+  ]);
+
+  const incFor = (partnerId: number, period: string) =>
+    seedIncentives.find(i => i.partnerId === partnerId && i.period === period);
+  const stockFor = (partnerId: number, sku: string) =>
+    seedStockEntries.find(s => s.partnerId === partnerId && s.sku === sku);
+
+  // Build timestamp: N days ago at a specific hour:minute
+  function ts(daysAgo: number, hour = 10, min = 0): Date {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(hour, min, 0, 0);
+    return d;
+  }
+
+  const p = kptPartners;
+  const SALES = AuditCategory.SALES_MANAGEMENT;
+
+  const kptAuditEntries: any[] = [
+
+    // ── Day -30: All 8 partners onboarded by Rajesh Kulkarni (KPT Admin) ──
+    ...p.map((partner, i) => ({
+      entityType: 'ChannelPartner', entityId: partner.id,
+      changedBy: kptAdminUser.id, action: 'PARTNER_CREATED',
+      newValues: { code: partner.code, name: partner.name, type: partner.type, tier: partner.tier, city: partner.city, state: partner.state, contactName: partner.contactName },
+      category: SALES, subCategory: 'Partner Onboarding',
+      changedAt: ts(30, 9 + Math.floor(i / 3), (i % 3) * 15),
+    })),
+
+    // ── Day -28: Initial stock setup for GOLD distributors ──
+    ...[
+      stockFor(p[0].id, 'KPT-AG4-001'),
+      stockFor(p[0].id, 'KPT-SDS-001'),
+      stockFor(p[2].id, 'KPT-AG4-001'),
+    ].filter(Boolean).map((s, i) => ({
+      entityType: 'StockEntry', entityId: s!.id,
+      changedBy: adminUser.id, action: 'STOCK_CREATED',
+      newValues: { productName: s!.productName, sku: s!.sku, stockQty: s!.stockQty, minStockQty: s!.minStockQty, stockStatus: s!.stockStatus },
+      category: SALES, subCategory: 'Initial Setup',
+      changedAt: ts(28, 10 + i, 0),
+    })),
+
+    // ── Day -24: Credit limit revision for distributors ──
+    { entityType: 'ChannelPartner', entityId: p[0].id, changedBy: kptAdminUser.id, action: 'PARTNER_UPDATED', oldValues: { creditLimit: 500000 }, newValues: { creditLimit: 1000000 }, category: SALES, subCategory: 'Credit Review', changedAt: ts(24, 11, 0) },
+    { entityType: 'ChannelPartner', entityId: p[1].id, changedBy: kptAdminUser.id, action: 'PARTNER_UPDATED', oldValues: { creditLimit: 600000 }, newValues: { creditLimit: 1000000 }, category: SALES, subCategory: 'Credit Review', changedAt: ts(24, 11, 20) },
+    { entityType: 'ChannelPartner', entityId: p[2].id, changedBy: kptAdminUser.id, action: 'PARTNER_UPDATED', oldValues: { creditLimit: 400000 }, newValues: { creditLimit: 1000000 }, category: SALES, subCategory: 'Credit Review', changedAt: ts(24, 11, 40) },
+
+    // ── Day -21: Aarav Engineering tier upgrade SILVER → GOLD ──
+    { entityType: 'ChannelPartner', entityId: p[3].id, changedBy: adminUser.id, action: 'PARTNER_UPDATED', oldValues: { tier: 'SILVER', targetAmount: 1000000 }, newValues: { tier: 'GOLD', targetAmount: 1200000 }, category: SALES, subCategory: 'Tier Upgrade', changedAt: ts(21, 14, 30) },
+
+    // ── Day -17: May 2026 incentive records opened for top 5 partners ──
+    ...[p[0], p[1], p[2], p[3], p[6]].map((partner, i) => {
+      const inc = incFor(partner.id, '2026-05');
+      if (!inc) return null;
+      return { entityType: 'PartnerIncentive', entityId: inc.id, changedBy: kptAdminUser.id, action: 'INCENTIVE_CREATED', newValues: { partnerName: partner.name, period: '2026-05', salesAmount: inc.salesAmount, incentivePercent: inc.incentivePercent, incentiveAmount: inc.incentiveAmount, status: 'PENDING' }, category: SALES, subCategory: 'May 2026 Cycle', changedAt: ts(17, 10 + i, 0) };
+    }).filter(Boolean),
+
+    // ── Day -14: May incentives submitted for review ──
+    ...[p[0], p[2], p[3]].map((partner, i) => {
+      const inc = incFor(partner.id, '2026-05');
+      if (!inc) return null;
+      return { entityType: 'PartnerIncentive', entityId: inc.id, changedBy: adminUser.id, action: 'INCENTIVE_UPDATED', oldValues: { status: 'PENDING' }, newValues: { status: 'UNDER_REVIEW' }, category: SALES, subCategory: 'May 2026 Review', changedAt: ts(14, 11 + i, 15) };
+    }).filter(Boolean),
+
+    // ── Day -11: May incentives approved (Super Admin) ──
+    ...[p[0], p[2]].map((partner, i) => {
+      const inc = incFor(partner.id, '2026-05');
+      if (!inc) return null;
+      return { entityType: 'PartnerIncentive', entityId: inc.id, changedBy: superAdminUser.id, action: 'INCENTIVE_UPDATED', oldValues: { status: 'UNDER_REVIEW' }, newValues: { status: 'APPROVED', approvedAt: '2026-07-31' }, category: SALES, subCategory: 'May 2026 Approval', changedAt: ts(11, 15 + i, 0) };
+    }).filter(Boolean),
+
+    // ── Day -10: May incentives paid via NEFT ──
+    ...[p[0], p[2]].map((partner, i) => {
+      const inc = incFor(partner.id, '2026-05');
+      if (!inc) return null;
+      return { entityType: 'PartnerIncentive', entityId: inc.id, changedBy: superAdminUser.id, action: 'INCENTIVE_UPDATED', oldValues: { status: 'APPROVED' }, newValues: { status: 'PAID', paidAt: '2026-08-01', remarks: 'Payment processed via NEFT' }, category: SALES, subCategory: 'May 2026 Payment', changedAt: ts(10, 10 + i * 2, 30) };
+    }).filter(Boolean),
+
+    // ── Day -9: Silver incentive slab rate revised 3.5% → 4.0% ──
+    seedSlabs[1] ? { entityType: 'IncentiveSlab', entityId: seedSlabs[1].id, changedBy: superAdminUser.id, action: 'INCENTIVE_SLAB_UPDATED', oldValues: { tier: 'SILVER', incentivePercent: 3.5 }, newValues: { tier: 'SILVER', incentivePercent: 4.0 }, category: SALES, subCategory: 'Slab Rate Revision', changedAt: ts(9, 14, 0) } : null,
+
+    // ── Day -7: Restocking after Pune warehouse delivery ──
+    ...[
+      { s: stockFor(p[0].id, 'KPT-AG4-001'), oldQty: 5, newQty: 35 },
+      { s: stockFor(p[1].id, 'KPT-ID13-001'), oldQty: 3, newQty: 25 },
+      { s: stockFor(p[2].id, 'KPT-SDS-001'), oldQty: 2, newQty: 18 },
+    ].filter(x => x.s).map(({ s, oldQty, newQty }, i) => ({
+      entityType: 'StockEntry', entityId: s!.id, changedBy: kptManagerUser.id, action: 'STOCK_UPDATED',
+      oldValues: { stockQty: oldQty, stockStatus: oldQty <= 5 ? 'CRITICAL' : 'LOW' },
+      newValues: { stockQty: newQty, stockStatus: 'HEALTHY' },
+      category: SALES, subCategory: 'Restocking', changedAt: ts(7, 9 + i, 0),
+    })),
+
+    // ── Day -5: Belgaum delivery batch ──
+    ...[
+      { s: stockFor(p[0].id, 'KPT-DH-001'), oldQty: 0, newQty: 12 },
+      { s: stockFor(p[2].id, 'KPT-AG7-001'), oldQty: 4, newQty: 20 },
+    ].filter(x => x.s).map(({ s, oldQty, newQty }, i) => ({
+      entityType: 'StockEntry', entityId: s!.id, changedBy: kptManagerUser.id, action: 'STOCK_UPDATED',
+      oldValues: { stockQty: oldQty, stockStatus: oldQty === 0 ? 'OUT_OF_STOCK' : 'CRITICAL' },
+      newValues: { stockQty: newQty, stockStatus: 'HEALTHY' },
+      category: SALES, subCategory: 'Restocking', changedAt: ts(5, 11 + i, 30),
+    })),
+
+    // ── Day -3: June 2026 incentive records opened ──
+    ...[p[0], p[1], p[2], p[3]].map((partner, i) => {
+      const inc = incFor(partner.id, '2026-06');
+      if (!inc) return null;
+      return { entityType: 'PartnerIncentive', entityId: inc.id, changedBy: kptAdminUser.id, action: 'INCENTIVE_CREATED', newValues: { partnerName: partner.name, period: '2026-06', salesAmount: inc.salesAmount, incentivePercent: inc.incentivePercent, incentiveAmount: inc.incentiveAmount, status: 'PENDING' }, category: SALES, subCategory: 'Jun 2026 Cycle', changedAt: ts(3, 10 + i, 0) };
+    }).filter(Boolean),
+
+    // ── Day -1: June incentives moved to review for GOLD partners ──
+    ...[p[0], p[2]].map((partner, i) => {
+      const inc = incFor(partner.id, '2026-06');
+      if (!inc) return null;
+      return { entityType: 'PartnerIncentive', entityId: inc.id, changedBy: adminUser.id, action: 'INCENTIVE_UPDATED', oldValues: { status: 'PENDING' }, newValues: { status: 'UNDER_REVIEW' }, category: SALES, subCategory: 'Jun 2026 Review', changedAt: ts(1, 15 + i, 0) };
+    }).filter(Boolean),
+
+    // ── Today: Vishwakarma Power Tools suspended — payment dispute ──
+    { entityType: 'ChannelPartner', entityId: p[4].id, changedBy: kptAdminUser.id, action: 'PARTNER_UPDATED', oldValues: { status: 'ACTIVE' }, newValues: { status: 'SUSPENDED' }, category: SALES, subCategory: 'Account Suspension', changedAt: ts(0, 9, 15) },
+
+    // ── Today: Morning delivery restocked Shree Ganesh AG5 ──
+    (() => {
+      const s = stockFor(p[0].id, 'KPT-AG5-001');
+      if (!s) return null;
+      return { entityType: 'StockEntry', entityId: s.id, changedBy: kptManagerUser.id, action: 'STOCK_UPDATED', oldValues: { stockQty: 6, stockStatus: 'LOW' }, newValues: { stockQty: 30, stockStatus: 'HEALTHY' }, category: SALES, subCategory: 'Restocking', changedAt: ts(0, 11, 45) };
+    })(),
+
+  ].filter(Boolean);
+
+  for (const entry of kptAuditEntries) {
+    await prisma.auditLog.create({ data: entry });
+  }
+
+  console.log(`  ✓ Seeded ${kptAuditEntries.length} KPT audit log entries across a 30-day timeline`);
 
   // Log all created user credentials for easy reference
   console.log("\n" + "=".repeat(80));
