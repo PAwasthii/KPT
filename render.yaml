@@ -6,7 +6,7 @@ services:
     name: innocrm-api
     runtime: node
     plan: free
-    buildCommand: npm install && npx turbo run build --filter=api && node scripts/prisma-deploy.mjs
+    buildCommand: npm install && npx turbo run build --filter=api
     startCommand: node apps/api/dist/index.js
     healthCheckPath: /health
     autoDeploy: true
