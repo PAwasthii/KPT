@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useIsAdminRole, useIsSystemAdmin } from "./guards/RoleGuard";
+import { useIsAdmin, useIsSystemAdmin } from "./guards/RoleGuard";
 
 function SidebarBrand() {
   const { open } = useSidebar();
@@ -55,7 +55,7 @@ function SidebarBrand() {
 export function AppSidebar() {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
-  const isAdmin = useIsAdminRole();
+  const isAdmin = useIsAdmin();
   const isSystemAdmin = useIsSystemAdmin();
 
   useEffect(() => {
@@ -209,7 +209,7 @@ export function AppSidebar() {
               />
             </SidebarCollapsibleItem>
 
-            {!isAdmin && (
+            {isAdmin && (
               <SidebarItem
                 icon={UserLock as any}
                 label="User Management"
