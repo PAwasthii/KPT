@@ -6,7 +6,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { AppLayoutWrapper } from "@/components/AppLayoutWrapper";
-import { SalesRouteGuard } from "@/components/guards/SalesRouteGuard";
 import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({
@@ -45,11 +44,9 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <CurrencyProvider>
-              <SalesRouteGuard>
-                <AppLayoutWrapper>
-                  {children}
-                </AppLayoutWrapper>
-              </SalesRouteGuard>
+              <AppLayoutWrapper>
+                {children}
+              </AppLayoutWrapper>
             </CurrencyProvider>
           </AuthProvider>
         </QueryProvider>
