@@ -63,7 +63,7 @@ export function parseApiError(error: unknown): ErrorDisplay {
       case 409:
         return {
           title: 'Conflict',
-          message: 'There is a conflict with the current state of the resource.',
+          message: apiError.message || 'There is a conflict with the current state of the resource.',
           type: 'error'
         };
       case 422:

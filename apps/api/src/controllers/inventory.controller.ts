@@ -66,6 +66,15 @@ export class InventoryController {
         );
       }
 
+      const skuTrimmed = String(sku).trim();
+      const existing = await prisma.inventoryItem.findUnique({ where: { sku: skuTrimmed } });
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          error: `SKU "${skuTrimmed}" already exists in inventory. Edit the existing item to update its quantity.`,
+        });
+      }
+
       const qty = Number(totalQty);
       const minQty = Number(minStockQty ?? 10);
       const stockStatus = computeStockStatus(qty, minQty);
@@ -73,7 +82,7 @@ export class InventoryController {
       const item = await prisma.inventoryItem.create({
         data: {
           productName: String(productName).trim(),
-          sku: String(sku).trim(),
+          sku: skuTrimmed,
           category: String(category).trim(),
           description: description ? String(description).trim() : null,
           totalQty: qty,
