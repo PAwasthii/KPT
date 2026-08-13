@@ -21,7 +21,7 @@ import {
   Label,
   Input,
 } from "@repo/ui";
-import { Package, AlertTriangle, CheckCircle2, XCircle, Plus, Pencil } from "lucide-react";
+import { Package, AlertTriangle, CheckCircle2, XCircle, Plus, Pencil, Store } from "lucide-react";
 import {
   useStockEntries,
   usePartners,
@@ -291,7 +291,12 @@ export function DealerStockPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dealer Stock Management</h1>
+          <div className="flex items-center gap-2.5 mb-0.5">
+            <h1 className="text-2xl font-bold text-foreground">Dealer Stock Management</h1>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+              <Store className="h-3.5 w-3.5" /> DEALER
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground">Stock dispatched to KPT dealers</p>
         </div>
         <AddStockDialog
@@ -311,7 +316,7 @@ export function DealerStockPage() {
         ].map((s) => (
           <Card key={s.label} className={`border ${s.bg}`}>
             <CardContent className="p-4 flex items-center gap-3">
-              <Package className={`h-7 w-7 ${s.color}`} />
+              <Store className={`h-7 w-7 ${s.color}`} />
               <div>
                 <p className={`text-xl font-bold ${s.color}`}>{s.value} SKUs</p>
                 <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -323,8 +328,8 @@ export function DealerStockPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold text-primary uppercase tracking-wide">
-            Stock by Dealer &amp; SKU
+          <CardTitle className="text-sm font-bold text-orange-700 uppercase tracking-wide flex items-center gap-2">
+            <Store className="h-4 w-4" /> Stock by Dealer &amp; SKU
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
