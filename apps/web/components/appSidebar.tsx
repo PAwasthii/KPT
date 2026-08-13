@@ -29,6 +29,7 @@ import {
   Gift,
   Warehouse,
   AlertTriangle,
+  ClipboardList,
   LineChart,
   Trophy,
   BookAIcon,
@@ -63,6 +64,7 @@ export function AppSidebar() {
   }, []);
 
   const isChannelPartnersActive = pathname.startsWith("/channel-partners");
+  const isStockInventoryActive = pathname.startsWith("/stock-inventory");
   const isStockVisibilityActive = pathname.startsWith("/stock-visibility");
   const isPerformanceActive = pathname.startsWith("/performance");
   const isSalesActive = pathname.startsWith("/sales");
@@ -109,6 +111,14 @@ export function AppSidebar() {
                 icon={Trophy as any}
               />
             </SidebarCollapsibleItem>
+
+            {/* Stock Inventory */}
+            <SidebarItem
+              icon={ClipboardList as any}
+              label="Stock Inventory"
+              href="/stock-inventory"
+              active={isClient && isStockInventoryActive}
+            />
 
             {/* Stock Visibility */}
             <SidebarCollapsibleItem

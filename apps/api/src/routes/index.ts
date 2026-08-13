@@ -33,6 +33,7 @@ import approvalRoutes from './approval.routes.js';
 import notificationRoutes from './notification.routes.js';
 import channelPartnerRoutes from './channelPartners.routes.js';
 import stockRoutes from './stock.routes.js';
+import inventoryRoutes from './inventory.routes.js';
 import incentiveSlabRoutes from './incentiveSlabs.routes.js';
 import performanceRoutes from './performance.routes.js';
 import auditLogRoutes from './auditLogs.routes.js';
@@ -112,6 +113,7 @@ export function setupRoutes(app: Express) {
 
   // KPT CRM routes
   app.use('/api/kpt/channel-partners', requireAuth, channelPartnerRoutes);
+  app.use('/api/kpt/inventory', requireAuth, inventoryRoutes);
   app.use('/api/kpt/stock', requireAuth, stockRoutes);
   app.use('/api/kpt/incentive-slabs', requireAuth, incentiveSlabRoutes);
   app.use('/api/kpt/performance', requireAuth, performanceRoutes);

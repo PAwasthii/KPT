@@ -1489,3 +1489,24 @@ model StockEntry {
   @@index([stockStatus])
   @@map("stock_entries")
 }
+
+model InventoryItem {
+  id          Int         @id @default(autoincrement())
+  productName String      @map("product_name")
+  sku         String      @unique
+  category    String
+  description String?
+  totalQty    Int         @default(0) @map("total_qty")
+  minStockQty Int         @default(10) @map("min_stock_qty")
+  reorderQty  Int         @default(20) @map("reorder_qty")
+  unitPrice   Float       @map("unit_price")
+  stockStatus StockStatus @default(HEALTHY) @map("stock_status")
+  lastUpdated DateTime    @default(now()) @map("last_updated")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([sku])
+  @@index([category])
+  @@index([stockStatus])
+  @@map("inventory_items")
+}

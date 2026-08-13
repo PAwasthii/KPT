@@ -48,7 +48,10 @@
       "Bash(git push *)",
       "Bash(git rm *)",
       "Bash(npx dotenv-cli *)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(npm --version)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(DATABASE_URL=\"postgresql://postgres.jcysezgcayzesuiakcix:KPT_Innovun@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true\" DIRECT_URL=\"postgresql://postgres.jcysezgcayzesuiakcix:KPT_Innovun@aws-0-ap-south-1.pooler.supabase.com:5432/postgres\" npx prisma *)"
     ],
     "deny": [],
     "ask": []

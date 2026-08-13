@@ -2024,3 +2024,57 @@ export const kptPerformanceService = {
     return response.data;
   },
 };
+
+// ============================================
+// KPT — Inventory Management
+// ============================================
+export const kptInventoryService = {
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    stockStatus?: string;
+    category?: string;
+    search?: string;
+  }) => {
+    const response = await apiClient.get('/api/kpt/inventory', { params });
+    return response.data;
+  },
+
+  create: async (data: {
+    productName: string;
+    sku: string;
+    category: string;
+    description?: string;
+    totalQty: number;
+    minStockQty?: number;
+    reorderQty?: number;
+    unitPrice: number;
+  }) => {
+    const response = await apiClient.post('/api/kpt/inventory', data);
+    return response.data;
+  },
+
+  bulkImport: async (items: Array<{
+    productName: string;
+    sku: string;
+    category?: string;
+    description?: string;
+    totalQty?: number;
+    minStockQty?: number;
+    reorderQty?: number;
+    unitPrice?: number;
+  }>) => {
+    const response = await apiClient.post('/api/kpt/inventory/import', { items });
+    return response.data;
+  },
+
+  update: async (id: number, data: Record<string, any>) => {
+    const response = await apiClient.put(`/api/kpt/inventory/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: number) => {
+    const response = await apiClient.delete(`/api/kpt/inventory/${id}`);
+    return response.data;
+  },
+};

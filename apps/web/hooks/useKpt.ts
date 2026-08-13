@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { kptPartnerService, kptStockService, kptIncentiveSlabService, kptPerformanceService } from '../lib/api/services';
+import { kptPartnerService, kptStockService, kptIncentiveSlabService, kptPerformanceService, kptInventoryService } from '../lib/api/services';
 
 // ============================================
 // Static fallback data (shown when API is offline)
@@ -101,6 +101,22 @@ const STATIC_KPIS = {
   },
 };
 
+const STATIC_INVENTORY = {
+  data: [
+    { id: 1, productName: 'KPT 100mm Angle Grinder KPT-AG4', sku: 'KPT-AG4-001', category: 'Grinders', description: '100mm angle grinder, 670W', totalQty: 120, minStockQty: 30, reorderQty: 50, unitPrice: 2850, stockStatus: 'HEALTHY', lastUpdated: new Date().toISOString() },
+    { id: 2, productName: 'KPT 115mm Angle Grinder KPT-AG5', sku: 'KPT-AG5-001', category: 'Grinders', description: '115mm angle grinder, 820W', totalQty: 85, minStockQty: 30, reorderQty: 50, unitPrice: 3200, stockStatus: 'HEALTHY', lastUpdated: new Date().toISOString() },
+    { id: 3, productName: 'KPT 180mm Angle Grinder KPT-AG7', sku: 'KPT-AG7-001', category: 'Grinders', description: '180mm angle grinder, 2000W', totalQty: 18, minStockQty: 20, reorderQty: 40, unitPrice: 5400, stockStatus: 'LOW', lastUpdated: new Date().toISOString() },
+    { id: 4, productName: 'KPT 13mm Impact Drill KPT-ID13', sku: 'KPT-ID13-001', category: 'Drills', description: '13mm impact drill, 650W', totalQty: 95, minStockQty: 25, reorderQty: 40, unitPrice: 3600, stockStatus: 'HEALTHY', lastUpdated: new Date().toISOString() },
+    { id: 5, productName: 'KPT SDS Plus Rotary Hammer KPT-SDS', sku: 'KPT-SDS-001', category: 'Drills', description: 'SDS Plus rotary hammer, 800W', totalQty: 3, minStockQty: 15, reorderQty: 25, unitPrice: 8500, stockStatus: 'CRITICAL', lastUpdated: new Date().toISOString() },
+    { id: 6, productName: 'KPT Cordless Drill 18V KPT-CD18', sku: 'KPT-CD18-001', category: 'Drills', description: '18V cordless drill with battery', totalQty: 42, minStockQty: 20, reorderQty: 30, unitPrice: 6200, stockStatus: 'HEALTHY', lastUpdated: new Date().toISOString() },
+    { id: 7, productName: 'KPT Demolition Hammer KPT-DH', sku: 'KPT-DH-001', category: 'Hammers', description: 'Heavy-duty demolition hammer, 1500W', totalQty: 0, minStockQty: 10, reorderQty: 20, unitPrice: 12500, stockStatus: 'OUT_OF_STOCK', lastUpdated: new Date().toISOString() },
+    { id: 8, productName: 'KPT Impact Wrench KPT-IW', sku: 'KPT-IW-001', category: 'Others', description: '1/2" impact wrench, 700W', totalQty: 28, minStockQty: 15, reorderQty: 25, unitPrice: 7200, stockStatus: 'HEALTHY', lastUpdated: new Date().toISOString() },
+    { id: 9, productName: 'KPT Circular Saw KPT-CS7', sku: 'KPT-CS7-001', category: 'Saws', description: '7-1/4" circular saw, 1200W', totalQty: 33, minStockQty: 15, reorderQty: 25, unitPrice: 4800, stockStatus: 'HEALTHY', lastUpdated: new Date().toISOString() },
+    { id: 10, productName: 'KPT Heat Gun KPT-HG', sku: 'KPT-HG-001', category: 'Others', description: 'Variable temperature heat gun, 2000W', totalQty: 7, minStockQty: 10, reorderQty: 20, unitPrice: 2200, stockStatus: 'LOW', lastUpdated: new Date().toISOString() },
+  ],
+  pagination: { page: 1, limit: 50, total: 10, totalPages: 1 },
+};
+
 // ============================================
 // Helper: wrap query to fall back to static data on failure
 // ============================================
@@ -138,6 +154,10 @@ export const kptKeys = {
     rankings: () => [...kptKeys.performance.all, 'rankings'] as const,
     trends: () => [...kptKeys.performance.all, 'trends'] as const,
     kpis: () => [...kptKeys.performance.all, 'kpis'] as const,
+  },
+  inventory: {
+    all: ['kpt-inventory'] as const,
+    list: (params?: any) => [...kptKeys.inventory.all, 'list', params || {}] as const,
   },
 };
 
@@ -414,5 +434,47 @@ export function useKptKPIs() {
   return useQuery({
     queryKey: kptKeys.performance.kpis(),
     queryFn: () => withFallback(kptPerformanceService.getDashboardKPIs, STATIC_KPIS),
+  });
+}
+
+// ============================================
+// Inventory hooks
+// ============================================
+export function useInventoryItems(params?: { page?: number; limit?: number; stockStatus?: string; category?: string; search?: string }) {
+  return useQuery({
+    queryKey: kptKeys.inventory.list(params),
+    queryFn: () => withFallback(() => kptInventoryService.getAll(params), STATIC_INVENTORY),
+  });
+}
+
+export function useCreateInventoryItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: kptInventoryService.create,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: kptKeys.inventory.all }),
+  });
+}
+
+export function useBulkImportInventory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: kptInventoryService.bulkImport,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: kptKeys.inventory.all }),
+  });
+}
+
+export function useUpdateInventoryItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Record<string, any> }) => kptInventoryService.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: kptKeys.inventory.all }),
+  });
+}
+
+export function useDeleteInventoryItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: kptInventoryService.delete,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: kptKeys.inventory.all }),
   });
 }
