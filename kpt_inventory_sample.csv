@@ -1,0 +1,17 @@
+SKU,Product Name,Category,Description,Qty,Min Qty,Reorder Qty,Unit Price
+KPT-AG4-001,KPT 100mm Angle Grinder,Grinders,100mm angle grinder 670W,120,30,50,2850
+KPT-AG5-001,KPT 115mm Angle Grinder,Grinders,115mm angle grinder 820W,85,30,50,3200
+KPT-AG7-001,KPT 180mm Angle Grinder,Grinders,180mm angle grinder 2000W,18,20,40,5400
+KPT-AG9-001,KPT 230mm Angle Grinder,Grinders,230mm angle grinder 2400W,0,15,30,7800
+KPT-ID13-001,KPT 13mm Impact Drill,Drills,13mm impact drill 650W,95,25,40,3600
+KPT-SDS-001,KPT SDS Plus Rotary Hammer,Drills,SDS Plus rotary hammer 800W,3,15,25,8500
+KPT-CD18-001,KPT Cordless Drill 18V,Drills,18V cordless drill with battery,42,20,30,6200
+KPT-DH-001,KPT Demolition Hammer,Hammers,Heavy-duty demolition hammer 1500W,0,10,20,12500
+KPT-RH-001,KPT Rotary Hammer 26mm,Hammers,26mm SDS Plus rotary hammer 800W,22,10,20,9200
+KPT-IW-001,KPT Impact Wrench,Others,1/2 inch impact wrench 700W,28,15,25,7200
+KPT-CS7-001,KPT 7-1/4 Circular Saw,Saws,7-1/4 inch circular saw 1200W,33,15,25,4800
+KPT-JS-001,KPT Jigsaw,Saws,Variable speed jigsaw 650W,7,10,20,3900
+KPT-BS-001,KPT Belt Sander,Sanders,Belt sander 900W 75x457mm,4,10,15,5100
+KPT-OS-001,KPT Orbital Sander,Sanders,Orbital sander 300W 125mm,19,10,20,2400
+KPT-HG-001,KPT Heat Gun,Others,Variable temperature heat gun 2000W,7,10,20,2200
+KPT-PL-001,KPT Polisher,Others,Variable speed polisher 1200W,11,8,15,6800

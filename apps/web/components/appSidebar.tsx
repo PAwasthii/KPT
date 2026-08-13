@@ -65,7 +65,7 @@ export function AppSidebar() {
 
   const isChannelPartnersActive = pathname.startsWith("/channel-partners");
   const isStockInventoryActive = pathname.startsWith("/stock-inventory");
-  const isStockVisibilityActive = pathname.startsWith("/stock-visibility");
+  const isStockManagementActive = pathname.startsWith("/stock-management") || pathname.startsWith("/stock-visibility");
   const isPerformanceActive = pathname.startsWith("/performance");
   const isSalesActive = pathname.startsWith("/sales");
 
@@ -120,29 +120,29 @@ export function AppSidebar() {
               active={isClient && isStockInventoryActive}
             />
 
-            {/* Stock Visibility */}
+            {/* Stock Management */}
             <SidebarCollapsibleItem
               icon={Warehouse as any}
-              label="Stock Visibility"
-              active={isClient && isStockVisibilityActive}
-              defaultOpen={isClient && isStockVisibilityActive}
+              label="Stock Management"
+              active={isClient && isStockManagementActive}
+              defaultOpen={isClient && isStockManagementActive}
             >
               <SidebarItem
                 label="Distributor Stock"
-                href="/stock-visibility/distributor"
-                active={isClient && pathname === "/stock-visibility/distributor"}
+                href="/stock-management/distributor"
+                active={isClient && pathname === "/stock-management/distributor"}
                 icon={Package as any}
               />
               <SidebarItem
                 label="Dealer Stock"
-                href="/stock-visibility/dealer"
-                active={isClient && pathname === "/stock-visibility/dealer"}
+                href="/stock-management/dealer"
+                active={isClient && pathname === "/stock-management/dealer"}
                 icon={Package as any}
               />
               <SidebarItem
                 label="Low Stock Alerts"
-                href="/stock-visibility/alerts"
-                active={isClient && pathname === "/stock-visibility/alerts"}
+                href="/stock-management/alerts"
+                active={isClient && pathname === "/stock-management/alerts"}
                 icon={AlertTriangle as any}
               />
             </SidebarCollapsibleItem>

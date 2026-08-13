@@ -1469,22 +1469,25 @@ model PartnerIncentive {
 }
 
 model StockEntry {
-  id          Int            @id @default(autoincrement())
-  partnerId   Int            @map("partner_id")
-  partner     ChannelPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  productName String         @map("product_name")
-  sku         String
-  category    String
-  stockQty    Int            @default(0) @map("stock_qty")
-  minStockQty Int            @default(10) @map("min_stock_qty")
-  reorderQty  Int            @default(20) @map("reorder_qty")
-  unitPrice   Float          @map("unit_price")
-  stockStatus StockStatus    @default(HEALTHY) @map("stock_status")
-  lastUpdated DateTime       @default(now()) @map("last_updated")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  id              Int            @id @default(autoincrement())
+  partnerId       Int            @map("partner_id")
+  partner         ChannelPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  inventoryItemId Int?           @map("inventory_item_id")
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  productName     String         @map("product_name")
+  sku             String
+  category        String
+  stockQty        Int            @default(0) @map("stock_qty")
+  minStockQty     Int            @default(10) @map("min_stock_qty")
+  reorderQty      Int            @default(20) @map("reorder_qty")
+  unitPrice       Float          @map("unit_price")
+  stockStatus     StockStatus    @default(HEALTHY) @map("stock_status")
+  lastUpdated     DateTime       @default(now()) @map("last_updated")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   @@index([partnerId])
+  @@index([inventoryItemId])
   @@index([sku])
   @@index([stockStatus])
   @@map("stock_entries")
@@ -1504,6 +1507,8 @@ model InventoryItem {
   lastUpdated DateTime    @default(now()) @map("last_updated")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  stockEntries StockEntry[]
 
   @@index([sku])
   @@index([category])
