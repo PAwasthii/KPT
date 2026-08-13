@@ -50,7 +50,7 @@ const PARTNER_TYPE_CONFIG: Record<string, { label: string; color: string; icon: 
 
 const SECTION_ORDER = ["OUT_OF_STOCK", "CRITICAL", "LOW"] as const;
 
-type PartnerFilter = "ALL" | "DISTRIBUTOR" | "DEALER";
+type PartnerFilter = "ALL" | "DISTRIBUTOR";
 
 export function StockAlertsPage() {
   const [partnerFilter, setPartnerFilter] = useState<PartnerFilter>("ALL");
@@ -91,7 +91,6 @@ export function StockAlertsPage() {
   };
 
   const distCount = allAlerts.filter((a) => partnerMap.get(a.partnerId)?.type === "DISTRIBUTOR").length;
-  const dealerCount = allAlerts.filter((a) => partnerMap.get(a.partnerId)?.type === "DEALER").length;
 
   return (
     <div className="space-y-6 p-6">
@@ -213,11 +212,10 @@ export function StockAlertsPage() {
 
           {/* Filter tabs */}
           <div className="ml-auto flex gap-1.5">
-            {(["ALL", "DISTRIBUTOR", "DEALER"] as const).map((f) => {
-              const count = f === "ALL" ? allAlerts.length : f === "DISTRIBUTOR" ? distCount : dealerCount;
+            {(["ALL", "DISTRIBUTOR"] as const).map((f) => {
+              const count = f === "ALL" ? allAlerts.length : distCount;
               const active = partnerFilter === f;
               const activeColor = f === "DISTRIBUTOR" ? "bg-blue-100 text-blue-700 border-blue-300"
-                                : f === "DEALER"      ? "bg-orange-100 text-orange-700 border-orange-300"
                                 :                       "bg-muted text-foreground border-border";
               return (
                 <button
@@ -227,7 +225,7 @@ export function StockAlertsPage() {
                     active ? activeColor : "border-border text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  {f === "ALL" ? "All" : f === "DISTRIBUTOR" ? "Distributors" : "Dealers"} ({count})
+                  {f === "ALL" ? "All" : "Distributors"} ({count})
                 </button>
               );
             })}
@@ -236,7 +234,7 @@ export function StockAlertsPage() {
 
         {filteredAlerts.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-6">
-            No partner stock alerts{partnerFilter !== "ALL" ? ` for ${partnerFilter.toLowerCase()}s` : ""}.
+            No partner stock alerts{partnerFilter === "DISTRIBUTOR" ? " for distributors" : ""}.
           </p>
         )}
 

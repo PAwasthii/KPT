@@ -15,9 +15,10 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/stock-visibility/distributor', destination: '/stock-management/distributor', permanent: true },
-      { source: '/stock-visibility/dealer', destination: '/stock-management/dealer', permanent: true },
+      { source: '/stock-visibility/dealer', destination: '/stock-management/distributor', permanent: true },
       { source: '/stock-visibility/alerts', destination: '/stock-management/alerts', permanent: true },
       { source: '/stock-visibility', destination: '/stock-management/distributor', permanent: true },
+      { source: '/stock-management/dealer', destination: '/stock-management/distributor', permanent: true },
     ];
   },
   // Ensure the shared UI package and DB package are transpiled by Next/Turbopack

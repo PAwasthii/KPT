@@ -134,12 +134,6 @@ export function AppSidebar() {
                 icon={Package as any}
               />
               <SidebarItem
-                label="Dealer Stock"
-                href="/stock-management/dealer"
-                active={isClient && pathname === "/stock-management/dealer"}
-                icon={Package as any}
-              />
-              <SidebarItem
                 label="Low Stock Alerts"
                 href="/stock-management/alerts"
                 active={isClient && pathname === "/stock-management/alerts"}
