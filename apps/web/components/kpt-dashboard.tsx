@@ -13,10 +13,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useKptKPIs, usePartnerRankings, useStockAlerts } from "../hooks/useKpt";
-
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
-const fmtCr = (n: number) =>
-  n >= 10000000 ? `₹${(n / 10000000).toFixed(2)} Cr` : fmt(n);
+import { useCurrency } from "../contexts/CurrencyContext";
 
 const TIER_COLORS: Record<string, string> = {
   GOLD: "bg-amber-100 text-amber-700 border-amber-200",
@@ -36,6 +33,14 @@ export function KptDashboard() {
   const { data: kpisData, isLoading: kpisLoading } = useKptKPIs();
   const { data: rankingsData, isLoading: rankingsLoading } = usePartnerRankings();
   const { data: alertsData, isLoading: alertsLoading } = useStockAlerts();
+  const { symbol, currency, convert } = useCurrency();
+
+  const fmt = (n: number) => currency === 'INR'
+    ? `${symbol}${(n / 100000).toFixed(1)} L`
+    : `${symbol}${convert(n).toLocaleString()}`;
+  const fmtCr = (n: number) => currency === 'INR' && n >= 10000000
+    ? `${symbol}${(n / 10000000).toFixed(2)} Cr`
+    : fmt(n);
 
   const kpis = kpisData?.data;
   const rankings = rankingsData?.data ?? [];

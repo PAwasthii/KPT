@@ -23,6 +23,7 @@ import {
 } from "@repo/ui"
 import { RoleGuard } from "@/components/guards/RoleGuard"
 import { useSalesOrderDetail } from "@/hooks/useSalesOrders"
+import { useCurrency } from "@/contexts/CurrencyContext"
 import { salesOrderService } from "@/lib/api/services"
 import { DataTable } from "@/components/data-table"
 import type { TableColumn } from "@/components/data-table"
@@ -69,44 +70,45 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   SHIPPED: "bg-sky-100 text-sky-800 border-sky-200",
 }
 
-const lineItemColumns: TableColumn<SalesOrderLineItem>[] = [
-  {
-    key: "product",
-    label: "Product Name",
-    render: (_, item) => item.product?.name ?? "—",
-  },
-  {
-    key: "productCode",
-    label: "Product Code",
-    render: (_, item) => item.product?.code ?? "—",
-  },
-  { key: "quantity", label: "Quantity" },
-  {
-    key: "listPrice",
-    label: "List Price",
-    render: (val) => (val != null ? formatCurrency(val) : "—"),
-  },
-  {
-    key: "discount",
-    label: "Discount (%)",
-    render: (val) => (val != null ? `${Number(val).toFixed(2)}%` : "—"),
-  },
-  {
-    key: "unitPrice",
-    label: "Unit Price",
-    render: (val) => (val != null ? formatCurrency(val) : "—"),
-  },
-  {
-    key: "totalPrice",
-    label: "Total Price",
-    render: (val) => (val != null ? formatCurrency(val) : "—"),
-  },
-]
-
 function OrderDetailContent() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const id = params?.id ? parseInt(params.id, 10) : 0
+  const { symbol, convert } = useCurrency()
+
+  const lineItemColumns = React.useMemo<TableColumn<SalesOrderLineItem>[]>(() => [
+    {
+      key: "product",
+      label: "Product Name",
+      render: (_, item) => item.product?.name ?? "—",
+    },
+    {
+      key: "productCode",
+      label: "Product Code",
+      render: (_, item) => item.product?.code ?? "—",
+    },
+    { key: "quantity", label: "Quantity" },
+    {
+      key: "listPrice",
+      label: "List Price",
+      render: (val) => (val != null ? `${symbol}${formatCurrency(convert(Number(val)))}` : "—"),
+    },
+    {
+      key: "discount",
+      label: "Discount (%)",
+      render: (val) => (val != null ? `${Number(val).toFixed(2)}%` : "—"),
+    },
+    {
+      key: "unitPrice",
+      label: "Unit Price",
+      render: (val) => (val != null ? `${symbol}${formatCurrency(convert(Number(val)))}` : "—"),
+    },
+    {
+      key: "totalPrice",
+      label: "Total Price",
+      render: (val) => (val != null ? `${symbol}${formatCurrency(convert(Number(val)))}` : "—"),
+    },
+  ], [symbol, convert])
 
   const { data: response, isLoading, isError } = useSalesOrderDetail(id)
   const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("details"))
@@ -254,11 +256,11 @@ function OrderDetailContent() {
                 <DetailCard title="Financial Summary" className="bg-white border-gray-200">
                   <div className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 p-4 text-white mb-4">
                     <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Grand Total</p>
-                    <p className="mt-1 text-3xl font-bold">₹{formatCurrency(order.grandTotal)}</p>
+                    <p className="mt-1 text-3xl font-bold">{symbol}{formatCurrency(convert(Number(order.grandTotal ?? 0)))}</p>
                     <div className="mt-3 flex flex-wrap gap-6 text-sm opacity-90">
                       <div>
                         <p className="text-xs opacity-75 uppercase tracking-wider">Subtotal</p>
-                        <p className="font-semibold">₹{formatCurrency(order.subtotal)}</p>
+                        <p className="font-semibold">{symbol}{formatCurrency(convert(Number(order.subtotal ?? 0)))}</p>
                       </div>
                       <div>
                         <p className="text-xs opacity-75 uppercase tracking-wider">Discount</p>
@@ -270,7 +272,7 @@ function OrderDetailContent() {
                       </div>
                       <div>
                         <p className="text-xs opacity-75 uppercase tracking-wider">Shipping</p>
-                        <p className="font-semibold">₹{formatCurrency(order.shippingAmount)}</p>
+                        <p className="font-semibold">{symbol}{formatCurrency(convert(Number(order.shippingAmount ?? 0)))}</p>
                       </div>
                     </div>
                   </div>

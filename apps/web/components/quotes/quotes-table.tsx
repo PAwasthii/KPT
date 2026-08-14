@@ -4,6 +4,7 @@ import * as React from "react"
 import { Checkbox, Button } from "@repo/ui"
 import { DataTable, type TableColumn } from "@/components/data-table"
 import type { Quote } from "./quote-types"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 type QuotesTableProps = {
   quotes: Quote[]
@@ -20,6 +21,7 @@ export function QuotesTable({
   onCreateClick,
   onQuoteClick,
 }: QuotesTableProps) {
+  const { symbol, convert } = useCurrency()
   const columns = React.useMemo<TableColumn<Quote>[]>(
     () => [
       {
@@ -46,14 +48,14 @@ export function QuotesTable({
       {
         key: "netAmount",
         label: "Net Amount",
-        render: (value) => <span className="text-muted-foreground">₹{Number(value || 0).toLocaleString()}</span>,
+        render: (value) => <span className="text-muted-foreground">{symbol}{convert(Number(value || 0)).toLocaleString()}</span>,
       },
       { key: "status", label: "Status", render: (value) => <span className="text-muted-foreground">{value || "-"}</span> },
       { key: "createdBy", label: "Created By", render: (value) => <span className="text-muted-foreground">{value || "-"}</span> },
       { key: "startDate", label: "Start Date", render: (value) => <span className="text-muted-foreground">{value || "-"}</span> },
       { key: "endDate", label: "End Date", render: (value) => <span className="text-muted-foreground">{value || "-"}</span> },
     ],
-    [onQuoteClick]
+    [onQuoteClick, symbol]
   )
 
   return (

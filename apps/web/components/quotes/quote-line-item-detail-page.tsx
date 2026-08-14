@@ -21,6 +21,7 @@ import {
 import { useQuoteLineItemsStore } from "./use-quote-line-items-store"
 import { useQuotesStore } from "./use-quotes-store"
 import { DUMMY_PRICEBOOKS, DUMMY_PRODUCTS } from "./quote-dummy-data"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 type QuoteLineItemDetailPageProps = {
   quoteId: string
@@ -46,6 +47,7 @@ export function QuoteLineItemDetailPage({
   lineItemId,
 }: QuoteLineItemDetailPageProps) {
   const router = useRouter()
+  const { symbol, convert } = useCurrency()
   const { isReady: quotesReady, getById: getQuoteById } = useQuotesStore()
   const {
     isReady: lineItemsReady,
@@ -190,8 +192,8 @@ export function QuoteLineItemDetailPage({
               <InfoField label="Quantity" value={String(lineItem.quantity)} />
               <InfoField label="Product" value={lineItem.productName} />
               <InfoField label="Pricebook" value={lineItem.pricebookName || "N/A"} />
-              <InfoField label="List Unit Price" value={`₹${lineItem.listUnitPrice.toLocaleString()}`} />
-              <InfoField label="Net Price" value={`₹${lineItem.netPrice.toLocaleString()}`} />
+              <InfoField label="List Unit Price" value={`${symbol}${convert(lineItem.listUnitPrice).toLocaleString()}`} />
+              <InfoField label="Net Price" value={`${symbol}${convert(lineItem.netPrice).toLocaleString()}`} />
               <InfoField label="Created By" value={lineItem.createdBy} />
               <InfoField label="Created At" value={formatDateTime(lineItem.createdAt)} />
               <InfoField label="Last Modified By" value={lineItem.lastModifiedBy} />

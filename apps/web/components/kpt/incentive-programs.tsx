@@ -28,6 +28,7 @@ import {
   useUpdateIncentiveSlab,
   useDeleteIncentiveSlab,
 } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 interface IncentiveSlab {
   id: number;
@@ -38,8 +39,6 @@ interface IncentiveSlab {
   description: string;
   isActive: boolean;
 }
-
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
 
 const TIER_LABEL: Record<string, string> = {
   BRONZE: "Bronze",
@@ -105,6 +104,7 @@ function SlabFormDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<SlabFormState>(initial ?? EMPTY_FORM);
+  const { symbol } = useCurrency();
 
   function set(field: keyof SlabFormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -140,7 +140,7 @@ function SlabFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Min Sale Amount (₹)</Label>
+              <Label>Min Sale Amount ({symbol})</Label>
               <Input
                 type="number"
                 value={form.minSaleAmount}
@@ -150,7 +150,7 @@ function SlabFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Max Sale Amount (₹)</Label>
+              <Label>Max Sale Amount ({symbol})</Label>
               <Input
                 type="number"
                 value={form.maxSaleAmount}
@@ -197,6 +197,10 @@ export function IncentiveProgramsPage() {
   const createSlab = useCreateIncentiveSlab();
   const updateSlab = useUpdateIncentiveSlab();
   const deleteSlab = useDeleteIncentiveSlab();
+  const { symbol, currency, convert } = useCurrency();
+  const fmt = (n: number) => currency === 'INR'
+    ? `${symbol}${(n / 100000).toFixed(1)} L`
+    : `${symbol}${convert(n).toLocaleString()}`;
 
   if (isLoading) {
     return (

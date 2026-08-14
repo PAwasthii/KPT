@@ -28,6 +28,7 @@ import {
   useCreateIncentive,
   useUpdateIncentive,
 } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 interface ChannelPartner {
   id: number;
@@ -48,8 +49,6 @@ interface PartnerIncentive {
   approvedAt: string | null;
   paidAt: string | null;
 }
-
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
 
 const STATUS_CONFIG: Record<
   string,
@@ -72,6 +71,10 @@ function PartnerIncentiveRows({
   isUpdating: boolean;
 }) {
   const { data, isLoading } = usePartnerIncentives(partner.id);
+  const { symbol, currency, convert } = useCurrency();
+  const fmt = (n: number) => currency === 'INR'
+    ? `${symbol}${(n / 100000).toFixed(1)} L`
+    : `${symbol}${convert(n).toLocaleString()}`;
   const incentives: PartnerIncentive[] = data?.data ?? [];
 
   if (isLoading) {
@@ -146,6 +149,7 @@ const EMPTY_FORM: RecordFormState = {
 
 export function IncentiveTrackerPage() {
   const { data: partnersData, isLoading: loadingPartners } = usePartners({ limit: 50 });
+  const { symbol } = useCurrency();
   const updateIncentive = useUpdateIncentive();
 
   const [recordOpen, setRecordOpen] = useState(false);
@@ -228,7 +232,7 @@ export function IncentiveTrackerPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Sales Amount (₹)</Label>
+                  <Label>Sales Amount ({symbol})</Label>
                   <Input
                     type="number"
                     value={form.salesAmount}

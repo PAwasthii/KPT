@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { DataTable, type TableColumn } from "@/components/data-table"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 export type QuoteLineItemRow = {
   id: string
@@ -35,6 +36,7 @@ export function QuoteLineItemsTable({
   onPageChange,
   onItemsPerPageChange,
 }: QuoteLineItemsTableProps) {
+  const { symbol, convert } = useCurrency()
   const columns = React.useMemo<TableColumn<QuoteLineItemRow>[]>(
     () => [
       {
@@ -63,7 +65,7 @@ export function QuoteLineItemsTable({
         label: "List Price",
         render: (v) => (
           <span className="text-muted-foreground">
-            {v != null ? `₹${Number(v).toLocaleString()}` : "—"}
+            {v != null ? `${symbol}${convert(Number(v)).toLocaleString()}` : "—"}
           </span>
         ),
       },
@@ -81,7 +83,7 @@ export function QuoteLineItemsTable({
         label: "Unit Price",
         render: (v) => (
           <span className="text-muted-foreground">
-            {v != null ? `₹${Number(v).toLocaleString()}` : "—"}
+            {v != null ? `${symbol}${convert(Number(v)).toLocaleString()}` : "—"}
           </span>
         ),
       },
@@ -90,12 +92,12 @@ export function QuoteLineItemsTable({
         label: "Total Price",
         render: (v) => (
           <span className="text-muted-foreground">
-            {v != null ? `₹${Number(v).toLocaleString()}` : "—"}
+            {v != null ? `${symbol}${convert(Number(v)).toLocaleString()}` : "—"}
           </span>
         ),
       },
     ],
-    []
+    [symbol, convert]
   )
 
   return (

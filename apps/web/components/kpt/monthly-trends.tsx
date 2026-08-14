@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { TrendingUp, Users, IndianRupee, AlertTriangle, Star } from "lucide-react";
 import { useMonthlyTrends, useKptKPIs } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 interface MonthlyTrend {
   period: string;
@@ -17,8 +18,6 @@ interface KPIData {
   lowStockAlerts: number;
   newDealersThisMonth: number;
 }
-
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
 
 function MiniBar({
   value,
@@ -58,6 +57,10 @@ function shortPeriod(period: string): string {
 export function MonthlyTrendsPage() {
   const { data: trendsData, isLoading: loadingTrends } = useMonthlyTrends();
   const { data: kpiData, isLoading: loadingKPIs } = useKptKPIs();
+  const { symbol, currency, convert } = useCurrency();
+  const fmt = (n: number) => currency === 'INR'
+    ? `${symbol}${(n / 100000).toFixed(1)} L`
+    : `${symbol}${convert(n).toLocaleString()}`;
 
   if (loadingTrends || loadingKPIs) {
     return <div className="p-8 text-center text-muted-foreground">Loading...</div>;

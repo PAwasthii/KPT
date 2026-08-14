@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { IndianRupee, TrendingUp } from "lucide-react";
 import { useRevenueSummary } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 interface RevenuePartner {
   name: string;
@@ -11,8 +12,6 @@ interface RevenuePartner {
   ytdSales: number;
   targetAmount: number;
 }
-
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
 
 const TIER_LABEL: Record<string, string> = {
   BRONZE: "Bronze",
@@ -38,6 +37,10 @@ const TYPE_COLORS = ["bg-primary", "bg-blue-500", "bg-purple-500", "bg-amber-500
 
 export function RevenueAnalysisPage() {
   const { data, isLoading } = useRevenueSummary();
+  const { symbol, currency, convert } = useCurrency();
+  const fmt = (n: number) => currency === 'INR'
+    ? `${symbol}${(n / 100000).toFixed(1)} L`
+    : `${symbol}${convert(n).toLocaleString()}`;
 
   if (isLoading) {
     return (

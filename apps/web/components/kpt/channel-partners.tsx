@@ -27,6 +27,7 @@ import {
   useCreatePartner,
   useUpdatePartner,
 } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 interface ChannelPartner {
   id: number;
@@ -47,8 +48,6 @@ interface ChannelPartner {
   creditLimit: number;
   outstandingPayment: number;
 }
-
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
 
 const TIER_LABEL: Record<string, string> = {
   BRONZE: "Bronze",
@@ -123,6 +122,7 @@ function PartnerFormDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<PartnerFormState>(initial ?? EMPTY_FORM);
+  const { symbol } = useCurrency();
 
   function set(field: keyof PartnerFormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -202,7 +202,7 @@ function PartnerFormDialog({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Target Amount (₹)</Label>
+            <Label>Target Amount ({symbol})</Label>
             <Input
               type="number"
               value={form.targetAmount}
@@ -226,6 +226,10 @@ export function ChannelPartnersPage() {
   const { data, isLoading } = usePartners({ limit: 100 });
   const createPartner = useCreatePartner();
   const updatePartner = useUpdatePartner();
+  const { symbol, currency, convert } = useCurrency();
+  const fmt = (n: number) => currency === 'INR'
+    ? `${symbol}${(n / 100000).toFixed(1)} L`
+    : `${symbol}${convert(n).toLocaleString()}`;
 
   if (isLoading) {
     return (

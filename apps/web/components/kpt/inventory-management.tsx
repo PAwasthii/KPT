@@ -41,6 +41,8 @@ import {
   useDeleteInventoryItem,
   useBulkImportInventory,
 } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
+import type { CurrencyEntry } from "../../contexts/CurrencyContext";
 
 interface InventoryItem {
   id: number;
@@ -65,8 +67,6 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ElementType; la
 
 const CATEGORIES = ["Grinders", "Drills", "Hammers", "Saws", "Sanders", "Others"];
 
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
-
 interface ItemFormState {
   productName: string;
   sku: string;
@@ -75,6 +75,7 @@ interface ItemFormState {
   totalQty: string;
   minStockQty: string;
   reorderQty: string;
+  currency: string;
   unitPrice: string;
 }
 
@@ -86,16 +87,20 @@ const EMPTY_FORM: ItemFormState = {
   totalQty: "",
   minStockQty: "10",
   reorderQty: "20",
+  currency: "INR",
   unitPrice: "",
 };
 
 function ItemForm({
   form,
   onChange,
+  currencies,
 }: {
   form: ItemFormState;
   onChange: (field: keyof ItemFormState, value: string) => void;
+  currencies: CurrencyEntry[];
 }) {
+  const selectedCurrency = currencies.find(c => c.code === form.currency);
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -146,7 +151,22 @@ function ItemForm({
         />
       </div>
       <div>
-        <Label>Unit Price (₹) *</Label>
+        <Label>Currency *</Label>
+        <Select value={form.currency} onValueChange={(v) => onChange("currency", v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select currency" />
+          </SelectTrigger>
+          <SelectContent>
+            {currencies.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.symbol} — {c.name} ({c.code})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="col-span-2">
+        <Label>Unit Price ({selectedCurrency?.symbol ?? "₹"}) *</Label>
         <Input
           type="number"
           min={0}
@@ -181,10 +201,18 @@ function AddStockDialog() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ItemFormState>(EMPTY_FORM);
   const createItem = useCreateInventoryItem();
+  const { currency: globalCurrency, currencies } = useCurrency();
 
   const handleChange = useCallback((field: keyof ItemFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
+
+  const handleOpen = (isOpen: boolean) => {
+    if (isOpen) {
+      setForm({ ...EMPTY_FORM, currency: globalCurrency });
+    }
+    setOpen(isOpen);
+  };
 
   const handleSubmit = async () => {
     if (!form.productName || !form.sku || !form.category || !form.totalQty || !form.unitPrice) return;
@@ -203,7 +231,7 @@ function AddStockDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4 mr-1" /> Add Stock
@@ -213,7 +241,7 @@ function AddStockDialog() {
         <DialogHeader>
           <DialogTitle>Add Stock Item</DialogTitle>
         </DialogHeader>
-        <ItemForm form={form} onChange={handleChange} />
+        <ItemForm form={form} onChange={handleChange} currencies={currencies} />
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
           <Button
@@ -230,6 +258,7 @@ function AddStockDialog() {
 
 function EditItemDialog({ item }: { item: InventoryItem }) {
   const [open, setOpen] = useState(false);
+  const { currency: globalCurrency, currencies } = useCurrency();
   const [form, setForm] = useState<ItemFormState>({
     productName: item.productName,
     sku: item.sku,
@@ -238,6 +267,7 @@ function EditItemDialog({ item }: { item: InventoryItem }) {
     totalQty: String(item.totalQty),
     minStockQty: String(item.minStockQty),
     reorderQty: String(item.reorderQty),
+    currency: globalCurrency,
     unitPrice: String(item.unitPrice),
   });
   const updateItem = useUpdateInventoryItem();
@@ -274,7 +304,7 @@ function EditItemDialog({ item }: { item: InventoryItem }) {
         <DialogHeader>
           <DialogTitle>Edit Stock Item</DialogTitle>
         </DialogHeader>
-        <ItemForm form={form} onChange={handleChange} />
+        <ItemForm form={form} onChange={handleChange} currencies={currencies} />
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={updateItem.isPending}>
@@ -480,7 +510,7 @@ function ImportDialog() {
   );
 }
 
-function exportToExcel(items: InventoryItem[]) {
+function exportToExcel(items: InventoryItem[], symbol: string) {
   const rows = items.map((item) => ({
     SKU: item.sku,
     "Product Name": item.productName,
@@ -489,7 +519,7 @@ function exportToExcel(items: InventoryItem[]) {
     "Total Qty": item.totalQty,
     "Min Qty": item.minStockQty,
     "Reorder Qty": item.reorderQty,
-    "Unit Price (₹)": item.unitPrice,
+    [`Unit Price (${symbol})`]: item.unitPrice,
     Status: STATUS_CONFIG[item.stockStatus]?.label ?? item.stockStatus,
     "Last Updated": new Date(item.lastUpdated).toLocaleDateString("en-IN"),
   }));
@@ -508,6 +538,9 @@ export function InventoryManagementPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const { symbol, currency: globalCurrency, currencies, updateCurrency, convert } = useCurrency();
+
+  const fmt = (n: number) => `${symbol}${convert(n).toLocaleString("en-IN")}`;
 
   const { data, isLoading } = useInventoryItems({
     limit: 500,
@@ -536,7 +569,7 @@ export function InventoryManagementPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => exportToExcel(items)}
+            onClick={() => exportToExcel(items, symbol)}
             disabled={items.length === 0}
           >
             <Download className="h-4 w-4 mr-1" /> Export Excel
@@ -611,6 +644,18 @@ export function InventoryManagementPage() {
             <SelectItem value="LOW">Low Stock</SelectItem>
             <SelectItem value="CRITICAL">Critical</SelectItem>
             <SelectItem value="OUT_OF_STOCK">Out of Stock</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={globalCurrency} onValueChange={updateCurrency}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Currency" />
+          </SelectTrigger>
+          <SelectContent>
+            {currencies.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.symbol} {c.code} — {c.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

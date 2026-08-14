@@ -6,6 +6,7 @@ import { RoleGuard } from "@/components/guards/RoleGuard"
 import { DataTable, type TableColumn } from "@/components/data-table"
 import { useQuotesWithPagination } from "@/hooks/useQuotes"
 import type { QuoteListItem } from "@/lib/api/types"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 export type QuoteTableRow = {
   id: string
@@ -43,6 +44,7 @@ function mapQuoteToTableRow(quote: QuoteListItem): QuoteTableRow {
 
 export default function QuotesPage() {
   const router = useRouter()
+  const { symbol, convert } = useCurrency()
   const [page, setPage] = React.useState(1)
   const [itemsPerPage, setItemsPerPage] = React.useState(10)
 
@@ -78,7 +80,7 @@ export default function QuotesPage() {
         label: "Net Amount",
         render: (value) => (
           <span className="text-muted-foreground">
-            ₹{Number(value ?? 0).toLocaleString()}
+            {symbol}{convert(Number(value ?? 0)).toLocaleString()}
           </span>
         ),
       },
@@ -111,7 +113,7 @@ export default function QuotesPage() {
         ),
       },
     ],
-    []
+    [symbol, convert]
   )
 
   const handlePageChange = React.useCallback((newPage: number) => {

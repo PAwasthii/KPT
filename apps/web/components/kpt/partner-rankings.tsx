@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { usePartnerRankings } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 interface PartnerRanking {
   rank: number;
@@ -12,8 +13,6 @@ interface PartnerRanking {
   targetAmount: number;
   achievementPct: number;
 }
-
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
 
 const TIER_LABEL: Record<string, string> = {
   BRONZE: "Bronze",
@@ -75,6 +74,10 @@ function TrendIndicator({ achievementPct }: { achievementPct: number }) {
 
 export function PartnerRankingsPage() {
   const { data, isLoading } = usePartnerRankings();
+  const { symbol, currency, convert } = useCurrency();
+  const fmt = (n: number) => currency === 'INR'
+    ? `${symbol}${(n / 100000).toFixed(1)} L`
+    : `${symbol}${convert(n).toLocaleString()}`;
 
   if (isLoading) {
     return (

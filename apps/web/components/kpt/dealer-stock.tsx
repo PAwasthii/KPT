@@ -29,6 +29,7 @@ import {
   useUpdateStock,
   useInventoryItems,
 } from "../../hooks/useKpt";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 interface StockEntry {
   id: number;
@@ -61,8 +62,6 @@ interface InventoryItem {
   stockStatus: string;
 }
 
-const fmt = (n: number) => `₹${(n / 100000).toFixed(1)} L`;
-
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ElementType; label: string }> = {
   HEALTHY: { color: "bg-green-100 text-green-700", icon: CheckCircle2, label: "Healthy" },
   LOW: { color: "bg-amber-100 text-amber-700", icon: AlertTriangle, label: "Low Stock" },
@@ -86,6 +85,7 @@ function AddStockDialog({
   const [inventoryItemId, setInventoryItemId] = useState("");
   const [stockQty, setStockQty] = useState("");
   const [minStockQty, setMinStockQty] = useState("5");
+  const { symbol, convert } = useCurrency();
 
   const selectedItem = inventoryItems.find((i) => String(i.id) === inventoryItemId);
   const available = selectedItem?.totalQty ?? 0;
@@ -147,7 +147,7 @@ function AddStockDialog({
             </Select>
             {selectedItem && (
               <p className="text-xs text-muted-foreground">
-                Category: <span className="font-medium">{selectedItem.category}</span> · Unit price: <span className="font-medium">{fmt(selectedItem.unitPrice)}</span> · Available in inventory: <span className={`font-semibold ${available === 0 ? "text-red-600" : available < 10 ? "text-amber-600" : "text-green-600"}`}>{available}</span>
+                Category: <span className="font-medium">{selectedItem.category}</span> · Unit price: <span className="font-medium">{symbol}{convert(selectedItem.unitPrice).toLocaleString()}</span> · Available in inventory: <span className={`font-semibold ${available === 0 ? "text-red-600" : available < 10 ? "text-amber-600" : "text-green-600"}`}>{available}</span>
               </p>
             )}
           </div>
@@ -256,6 +256,9 @@ export function DealerStockPage() {
   const { data: inventoryData, isLoading: loadingInventory } = useInventoryItems({ limit: 500 });
   const createStock = useCreateStock();
   const updateStock = useUpdateStock();
+  const { symbol, currency: globalCurrency, currencies, updateCurrency, convert } = useCurrency();
+
+  const fmt = (n: number) => `${symbol}${convert(n).toLocaleString()}`;
 
   if (loadingStock || loadingPartners || loadingInventory) {
     return <div className="p-8 text-center text-muted-foreground">Loading…</div>;
@@ -299,12 +302,26 @@ export function DealerStockPage() {
           </div>
           <p className="text-sm text-muted-foreground">Stock dispatched to KPT dealers</p>
         </div>
-        <AddStockDialog
-          partners={partners}
-          inventoryItems={inventoryItems}
-          onCreate={handleCreate}
-          isPending={createStock.isPending}
-        />
+        <div className="flex items-center gap-3">
+          <Select value={globalCurrency} onValueChange={updateCurrency}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {currencies.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.symbol} {c.code} — {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AddStockDialog
+            partners={partners}
+            inventoryItems={inventoryItems}
+            onCreate={handleCreate}
+            isPending={createStock.isPending}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">

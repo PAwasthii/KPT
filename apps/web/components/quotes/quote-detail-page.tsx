@@ -35,6 +35,7 @@ import {
 import { useQuote, useQuoteLineItems, useQuoteOrder, useGenerateOrder, useSetPrimaryQuote, useUpdateQuoteStatus, QUOTE_STATUS_API_VALUES } from "@/hooks/useQuotes"
 import { quoteService } from "@/lib/api/services"
 import { toast } from "sonner"
+import { useCurrency } from "@/contexts/CurrencyContext"
 import { QuoteLineItemsTable, type QuoteLineItemRow } from "./quote-line-items-table"
 import { ApplyForApprovalDialog } from "@/components/approvals/apply-for-approval-dialog"
 import type { QuoteLineItemApi } from "@/lib/api/types"
@@ -69,8 +70,8 @@ function toNum(v: number | string | undefined): number {
   return typeof v === "number" ? v : Number(v) || 0
 }
 
-function formatCurrency(n: number): string {
-  return `₹${n.toLocaleString()}`
+function makeFmtCurrency(symbol: string, convert: (n: number) => number) {
+  return (n: number) => `${symbol}${convert(n).toLocaleString()}`
 }
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -103,6 +104,8 @@ function mapApiLineItemToRow(item: QuoteLineItemApi): QuoteLineItemRow {
 
 export function QuoteDetailPage({ quoteId }: QuoteDetailPageProps) {
   const router = useRouter()
+  const { symbol: currencySymbol, convert } = useCurrency()
+  const formatCurrency = makeFmtCurrency(currencySymbol, convert)
   const [lineItemsPage, setLineItemsPage] = React.useState(1)
   const [lineItemsPerPage, setLineItemsPerPage] = React.useState(10)
   const [tabState, setTabState] = useQueryStates(

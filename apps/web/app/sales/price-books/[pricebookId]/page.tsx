@@ -1,10 +1,11 @@
 "use client";
 export const runtime = 'edge'
 
-import { use } from "react";
+import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { usePricebook } from "@/hooks/usePricebooks";
 import { usePricebookEntriesByPriceBookId } from "@/hooks/usePricebookEntries";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { DataTable } from "@/components/data-table";
 import type { TableColumn } from "@/components/data-table";
 import type { PriceBookEntry } from "@/lib/api/types";
@@ -21,51 +22,6 @@ import {
   TabsContents,
 } from "@repo/ui";
 
-const entryColumns: TableColumn<PriceBookEntry>[] = [
-  {
-    key: "id",
-    label: "ID",
-    render: (id) => id,
-  },
-  {
-    key: "productId",
-    label: "Product",
-    render: (_, item) => item.product?.name || `Product #${item.productId}`,
-  },
-  {
-    key: "listPrice",
-    label: "List Price",
-    render: (listPrice) => `₹${Number(listPrice).toLocaleString("en-IN")}`,
-  },
-  {
-    key: "isActive",
-    label: "Status",
-    render: (isActive) => (
-      <Badge variant={isActive ? "default" : "destructive"}>
-        {isActive ? "Active" : "Inactive"}
-      </Badge>
-    ),
-  },
-  {
-    key: "useStandardPrice",
-    label: "Standard Price",
-    render: (useStandardPrice) => (
-      <Badge variant={useStandardPrice ? "default" : "secondary"}>
-        {useStandardPrice ? "Yes" : "No"}
-      </Badge>
-    ),
-  },
-  {
-    key: "createdAt",
-    label: "Created At",
-    render: (createdAt) =>
-      new Date(createdAt).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
-  },
-];
 
 interface PageProps {
   params: Promise<{ pricebookId: string }>;
@@ -75,6 +31,53 @@ export default function PriceBookDetailPage({ params }: PageProps) {
   const { pricebookId } = use(params);
   const priceBookId = parseInt(pricebookId);
   const router = useRouter();
+  const { symbol, convert } = useCurrency();
+
+  const entryColumns = useMemo<TableColumn<PriceBookEntry>[]>(() => [
+    {
+      key: "id",
+      label: "ID",
+      render: (id) => id,
+    },
+    {
+      key: "productId",
+      label: "Product",
+      render: (_, item) => item.product?.name || `Product #${item.productId}`,
+    },
+    {
+      key: "listPrice",
+      label: "List Price",
+      render: (listPrice) => `${symbol}${convert(Number(listPrice)).toLocaleString("en-IN")}`,
+    },
+    {
+      key: "isActive",
+      label: "Status",
+      render: (isActive) => (
+        <Badge variant={isActive ? "default" : "destructive"}>
+          {isActive ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "useStandardPrice",
+      label: "Standard Price",
+      render: (useStandardPrice) => (
+        <Badge variant={useStandardPrice ? "default" : "secondary"}>
+          {useStandardPrice ? "Yes" : "No"}
+        </Badge>
+      ),
+    },
+    {
+      key: "createdAt",
+      label: "Created At",
+      render: (createdAt) =>
+        new Date(createdAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        }),
+    },
+  ], [symbol, convert]);
 
   const { data: pbData, isLoading: pbLoading, error: pbError } = usePricebook(priceBookId);
   const { data: entriesData, isLoading: entriesLoading } = usePricebookEntriesByPriceBookId({ priceBookId });

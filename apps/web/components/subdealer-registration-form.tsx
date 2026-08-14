@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button } from "@repo/ui/components/ui/button";
 import {
   Card,
@@ -721,6 +722,7 @@ function InvoiceUploadView({ phone, onBack }: { phone: string, onBack: () => voi
 }
 
 function OrderBookingView({ subdealerId, onBack }: { subdealerId: number | null, onBack: () => void }) {
+  const { symbol: currencySymbol, convert } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
@@ -854,7 +856,7 @@ function OrderBookingView({ subdealerId, onBack }: { subdealerId: number | null,
                 </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total Amount:</span>
-                  <span>₹{totalCost.toLocaleString()}</span>
+                  <span>{currencySymbol}{convert(totalCost).toLocaleString()}</span>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -886,7 +888,7 @@ function OrderBookingView({ subdealerId, onBack }: { subdealerId: number | null,
                 <p className="text-xl font-bold font-mono">{orderSuccess.orderNumber}</p>
                 <div className="h-px bg-border my-2" />
                 <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-xl font-bold">₹{Number(orderSuccess.totalAmount).toLocaleString()}</p>
+                <p className="text-xl font-bold">{currencySymbol}{convert(Number(orderSuccess.totalAmount)).toLocaleString()}</p>
               </div>
               <Button className="w-full" onClick={onBack}>
                 Return to Menu
@@ -933,7 +935,7 @@ function OrderBookingView({ subdealerId, onBack }: { subdealerId: number | null,
                         <h3 className="font-semibold text-lg">{product.name}</h3>
                         <p className="text-sm text-muted-foreground font-mono">{product.code}</p>
                       </div>
-                      <p className="font-bold text-lg">₹{Number(product.price).toLocaleString()}</p>
+                      <p className="font-bold text-lg">{currencySymbol}{convert(Number(product.price)).toLocaleString()}</p>
                     </div>
                     {product.description && (
                       <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
@@ -1004,7 +1006,7 @@ function OrderBookingView({ subdealerId, onBack }: { subdealerId: number | null,
 
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-medium truncate" title={product.name}>{product.name}</h4>
-                          <p className="text-xs text-muted-foreground">₹{Number(product.price).toLocaleString()} x {qty}</p>
+                          <p className="text-xs text-muted-foreground">{currencySymbol}{convert(Number(product.price)).toLocaleString()} x {qty}</p>
 
                           <div className="flex items-center justify-between mt-2">
                             {/* ---- NEW INPUT FIELD FOR QUANTITY ---- */}
@@ -1046,7 +1048,7 @@ function OrderBookingView({ subdealerId, onBack }: { subdealerId: number | null,
                 </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>₹{totalCost.toLocaleString()}</span>
+                  <span>{currencySymbol}{convert(totalCost).toLocaleString()}</span>
                 </div>
                 <Button
                   className="w-full"

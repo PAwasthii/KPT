@@ -23,8 +23,6 @@ import {
   Package,
   ReceiptText,
   ShoppingCart,
-  BookCheckIcon,
-  ClipboardCheck,
   Handshake,
   Gift,
   Warehouse,
@@ -32,7 +30,6 @@ import {
   ClipboardList,
   LineChart,
   Trophy,
-  BookAIcon,
   Shield,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -176,12 +173,6 @@ export function AppSidebar() {
               defaultOpen={isClient && isSalesActive}
             >
               <SidebarItem
-                label="Opportunities"
-                href="/sales/opportunities"
-                active={isClient && pathname.startsWith("/sales/opportunities")}
-                icon={BookAIcon as any}
-              />
-              <SidebarItem
                 label="Quotes"
                 href="/sales/quotes"
                 active={isClient && pathname.startsWith("/sales/quotes")}
@@ -198,18 +189,6 @@ export function AppSidebar() {
                 href="/sales/products"
                 active={isClient && pathname.startsWith("/sales/products")}
                 icon={Package as any}
-              />
-              <SidebarItem
-                label="Price Books"
-                href="/sales/price-books"
-                active={isClient && pathname.startsWith("/sales/price-books")}
-                icon={BookCheckIcon as any}
-              />
-              <SidebarItem
-                label="Approvals"
-                href="/sales/approvals"
-                active={isClient && pathname.startsWith("/sales/approvals")}
-                icon={ClipboardCheck as any}
               />
             </SidebarCollapsibleItem>
 
