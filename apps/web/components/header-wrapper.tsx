@@ -45,10 +45,10 @@ export function HeaderWrapper({
         icon={
           icon ?? (
             <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">C</span>
+              <div className="h-8 w-8 rounded-md flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0D1B45 0%, #1A4FA3 100%)" }}>
+                <span className="text-white font-bold text-sm">KPT</span>
               </div>
-              <span className="font-bold text-xl">CRM Suite</span>
+              <span className="font-bold text-xl text-[#0D1B45]">Partner Portal</span>
               <Badge variant={healthStatus.variant} className="ml-2">
                 {healthStatus.text}
               </Badge>

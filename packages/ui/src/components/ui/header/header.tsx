@@ -31,45 +31,34 @@ export function Header({
   tabs,
   ...props
 }: HeaderProps) {
-  const hasWhiteBackground = className?.includes('bg-white') || className?.includes('!bg-white')
-  const hasLightYellowBackground = className?.includes('bg-indigo-50') || className?.includes('bg-amber-50')
-  
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-border backdrop-blur max-w-screen-3xl mx-auto justify-center  ",
+        "sticky top-0 z-50 w-full max-w-screen-3xl mx-auto",
         className
       )}
       {...props}
     >
-        <div className={cn(
-        "container flex h-16 shadow-sm items-center justify-between w-full max-w-screen-3xl mx-auto pr-6", 
-        hasWhiteBackground ? 'bg-white' : 
-        hasLightYellowBackground ? 'bg-indigo-50' :
-        'bg-navbar'
-      )}>
-        {/* Left side - Icon */}
+      <div className="flex h-16 items-center justify-between px-4 pr-6 bg-white shadow-sm w-full">
+        {/* Left side */}
         <div className="flex items-center">
           {icon && (
-            <div className="flex items-center space-x-2 text-primary">
+            <div className="flex items-center space-x-2 text-foreground">
               {icon}
             </div>
           )}
         </div>
 
-        {/* Center - Tabs */}
+        {/* Center — Tabs */}
         {tabs && (
           <div className="flex-1 flex justify-center">
             {tabs}
           </div>
         )}
 
-        {/* Right side - Notifications and Profile */}
+        {/* Right side */}
         <div className="flex items-center gap-3">
-          {/* Notification bell — rendered by the app layer so it can use app hooks */}
           {notificationSlot}
-
-          {/* Profile Dropdown */}
           {user && (
             <ProfileDropdown
               user={user}
@@ -79,6 +68,11 @@ export function Header({
           )}
         </div>
       </div>
+      {/* KPT brand accent line — navy → blue → orange */}
+      <div
+        className="h-[2px] w-full"
+        style={{ background: "linear-gradient(90deg, #0D1B45 0%, #1A4FA3 45%, #E8651A 100%)" }}
+      />
     </header>
   )
 }

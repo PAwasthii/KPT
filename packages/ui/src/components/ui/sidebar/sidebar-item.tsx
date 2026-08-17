@@ -18,18 +18,29 @@ interface SidebarItemProps {
 export function SidebarItem({ icon: Icon, label, href, active }: SidebarItemProps) {
   const { open } = useSidebar();
   const className = cn(
-    "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors h-10 min-h-10",
-    active && "bg-sidebar-primary text-sidebar-primary-foreground font-semibold hover:bg-sidebar-primary hover:text-sidebar-primary-foreground shadow-sm"
+    "group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/75 hover:bg-white/8 hover:text-sidebar-foreground transition-all duration-150 h-10 min-h-10",
+    active && "bg-sidebar-primary text-sidebar-primary-foreground font-semibold hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
   );
 
   const content = (
     <>
+      {active && (
+        <span className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-white/70 pointer-events-none" />
+      )}
       {Icon && (
-        <span className="flex-shrink-0">
+        <span className={cn(
+          "flex-shrink-0 transition-transform duration-150",
+          !active && "group-hover:scale-110"
+        )}>
           {React.createElement(Icon, { size: 18 })}
         </span>
       )}
-      <span className={cn("transition-opacity duration-150 ease-in-out whitespace-nowrap", !open && "opacity-0 w-0 overflow-hidden")}>{label}</span>
+      <span className={cn(
+        "transition-opacity duration-150 ease-in-out whitespace-nowrap",
+        !open && "opacity-0 w-0 overflow-hidden"
+      )}>
+        {label}
+      </span>
     </>
   );
 
@@ -48,7 +59,7 @@ export function SidebarItem({ icon: Icon, label, href, active }: SidebarItemProp
           <TooltipTrigger asChild>
             {itemContent}
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-black text-white rounded-md px-2 py-1 text-xs border-none">
+          <TooltipContent side="right" className="bg-[#0D1B45] text-white rounded-md px-2 py-1 text-xs border-none shadow-lg">
             {label}
           </TooltipContent>
         </Tooltip>

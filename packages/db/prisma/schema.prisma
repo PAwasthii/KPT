@@ -1426,6 +1426,7 @@ model ChannelPartner {
   contactPhone       String        @map("contact_phone")
   city               String
   state              String
+  country            String?   @default("India")
   region             String?
   gstin              String?
   creditLimit        Float         @default(0) @map("credit_limit")

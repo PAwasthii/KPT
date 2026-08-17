@@ -27,6 +27,9 @@
 	--brand-green: #22c55e; /* Green        — success, positive */
 	--brand-blue: #3b82f6; /* Blue         — insights, analytics */
 	--brand-purple: #8b5cf6; /* Purple       — opportunities, highlights */
+	--brand-navy: #0D1B45;         /* KPT Navy — sidebar base */
+	--brand-kpt-blue: #1A4FA3;     /* KPT Corporate Blue */
+	--brand-kpt-blue-light: #EEF3FF; /* Blue pale tint */
 	/* Legacy aliases so existing Tailwind utilities keep working */
 	--brand-indigo: #2c2c2c;
 	--brand-teal: #e8651a;
@@ -39,7 +42,7 @@
 }
 
 :root {
-	--background: #f5f5f5;
+	--background: #F5F7FB;
 	--foreground: #2c2c2c;
 	--card: #ffffff;
 	--card-foreground: #2c2c2c;
@@ -47,9 +50,9 @@
 	--popover-foreground: #2c2c2c;
 	--primary: #e8651a; /* KPT Orange — primary actions / CTAs / buttons */
 	--primary-foreground: #ffffff;
-	--secondary: #f0f0f0;
-	--secondary-foreground: #2c2c2c;
-	--muted: #f0f0f0;
+	--secondary: #EEF3FF;
+	--secondary-foreground: #0D1B45;
+	--muted: #EFF4FF;
 	--muted-foreground: #6b7280;
 	--accent: #fef3eb; /* Orange Pale — hover / subtle accent surfaces */
 	--accent-foreground: #2c2c2c;
@@ -166,6 +169,9 @@
 	--color-brand-green: var(--brand-green);
 	--color-brand-blue: var(--brand-blue);
 	--color-brand-purple: var(--brand-purple);
+	--color-brand-navy: var(--brand-navy);
+	--color-brand-kpt-blue: var(--brand-kpt-blue);
+	--color-brand-kpt-blue-light: var(--brand-kpt-blue-light);
 	/* Legacy aliases */
 	--color-brand-indigo: var(--brand-indigo);
 	--color-brand-teal: var(--brand-teal);
@@ -229,6 +235,71 @@
 .synkro-sidebar a.sidebar-active,
 .synkro-sidebar button.sidebar-active,
 .synkro-sidebar .bg-sidebar-primary {
-	background-color: var(--sidebar-primary) !important; /* KPT Orange */
+	background-color: var(--sidebar-primary) !important;
 	color: var(--sidebar-primary-foreground) !important;
+}
+
+/* ─── KPT Portal — animation keyframes ─── */
+@keyframes kpt-fade-up {
+	from { opacity: 0; transform: translateY(10px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes kpt-fade-in {
+	from { opacity: 0; }
+	to   { opacity: 1; }
+}
+@keyframes kpt-scale-in {
+	from { opacity: 0; transform: scale(0.97); }
+	to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── KPT Portal — global component polish ─── */
+@layer base {
+	/* Card subtle hover shadow */
+	[data-slot="card"] {
+		transition: box-shadow 0.25s ease;
+	}
+	[data-slot="card"]:hover {
+		box-shadow: 0 4px 24px -4px rgba(13, 27, 69, 0.1), 0 2px 8px -2px rgba(13, 27, 69, 0.05);
+	}
+	/* Table row smooth highlight */
+	tbody tr {
+		transition: background-color 0.12s ease;
+	}
+	/* Thin scrollbar with KPT blue tint */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: rgba(26, 79, 163, 0.18) transparent;
+	}
+	::-webkit-scrollbar {
+		width: 5px;
+		height: 5px;
+	}
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	::-webkit-scrollbar-thumb {
+		background: rgba(26, 79, 163, 0.2);
+		border-radius: 99px;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		background: rgba(26, 79, 163, 0.35);
+	}
+}
+
+/* ─── KPT Portal — animation utility classes ─── */
+@layer utilities {
+	.animate-kpt-fade-up {
+		animation: kpt-fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+	.animate-kpt-fade-in {
+		animation: kpt-fade-in 0.25s ease-out both;
+	}
+	.animate-kpt-scale-in {
+		animation: kpt-scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+	.animation-delay-100 { animation-delay: 100ms; }
+	.animation-delay-150 { animation-delay: 150ms; }
+	.animation-delay-200 { animation-delay: 200ms; }
+	.animation-delay-300 { animation-delay: 300ms; }
 }

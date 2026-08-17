@@ -59,9 +59,11 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
 
       {/* Content column: white top bar over the scrollable main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <HeaderWrapper icon={<span />} className="bg-white" />
+        <HeaderWrapper className="bg-white" />
         <main className="flex-1 overflow-y-auto">
-          {children}
+          <div key={pathname} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 min-h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

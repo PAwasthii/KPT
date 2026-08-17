@@ -32,6 +32,7 @@ import {
 import { useCurrency } from "../../contexts/CurrencyContext";
 import { GstinInput } from "../gstin-input";
 import type { GstDetails } from "../../lib/api/types";
+import { COUNTRIES, getStates, getCities } from "../../lib/location-data";
 
 interface ChannelPartner {
   id: number;
@@ -93,8 +94,9 @@ interface PartnerFormState {
   contactName: string;
   contactPhone: string;
   contactEmail: string;
-  city: string;
+  country: string;
   state: string;
+  city: string;
   targetAmount: string;
   gstin: string;
 }
@@ -107,8 +109,9 @@ const EMPTY_FORM: PartnerFormState = {
   contactName: "",
   contactPhone: "",
   contactEmail: "",
-  city: "",
+  country: "India",
   state: "",
+  city: "",
   targetAmount: "",
   gstin: "",
 };
@@ -130,8 +133,19 @@ function PartnerFormDialog({
   const [form, setForm] = useState<PartnerFormState>(initial ?? EMPTY_FORM);
   const { symbol } = useCurrency();
 
+  const availableStates = getStates(form.country);
+  const availableCities = getCities(form.country, form.state);
+
   function set(field: keyof PartnerFormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function setCountry(value: string) {
+    setForm((f) => ({ ...f, country: value, state: "", city: "" }));
+  }
+
+  function setState(value: string) {
+    setForm((f) => ({ ...f, state: value, city: "" }));
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -197,14 +211,47 @@ function PartnerFormDialog({
               <Input type="email" value={form.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} />
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label>Country</Label>
+            <Select value={form.country} onValueChange={setCountry}>
+              <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>City</Label>
-              <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
+              <Label>State</Label>
+              {availableStates.length > 0 ? (
+                <Select value={form.state} onValueChange={setState}>
+                  <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                  <SelectContent>
+                    {availableStates.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={form.state} onChange={(e) => set("state", e.target.value)} placeholder="State / Province" />
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label>State</Label>
-              <Input value={form.state} onChange={(e) => set("state", e.target.value)} />
+              <Label>City</Label>
+              {availableCities.length > 0 ? (
+                <Select value={form.city} onValueChange={(v) => set("city", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                  <SelectContent>
+                    {availableCities.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="City" />
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -216,8 +263,9 @@ function PartnerFormDialog({
                 setForm((f) => ({
                   ...f,
                   name: f.name || d.legalName,
-                  city: f.city || d.city || "",
+                  country: "India",
                   state: f.state || d.state || "",
+                  city: f.city || d.city || "",
                 }));
               }}
             />
@@ -259,6 +307,7 @@ const PARTNER_HEADER_MAP: Record<string, string> = {
   "mobile": "contactPhone",
   "email": "contactEmail",
   "contact email": "contactEmail",
+  "country": "country",
   "city": "city",
   "state": "state",
   "region": "region",
@@ -333,8 +382,8 @@ function ImportPartnersDialog() {
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ["Name", "Code", "Type", "Tier", "Contact Name", "Phone", "Email", "City", "State", "GSTIN", "Target Amount"],
-      ["Shree Ganesh Tools", "DIST-MH-001", "DISTRIBUTOR", "GOLD", "Suresh Patil", "9823456789", "suresh@sgtools.in", "Pune", "Maharashtra", "27AABCS1429B1Z5", 3600000],
+      ["Name", "Code", "Type", "Tier", "Contact Name", "Phone", "Email", "Country", "State", "City", "GSTIN", "Target Amount"],
+      ["Shree Ganesh Tools", "DIST-MH-001", "DISTRIBUTOR", "GOLD", "Suresh Patil", "9823456789", "suresh@sgtools.in", "India", "Maharashtra", "Pune", "27AABCS1429B1Z5", 3600000],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Partners");
@@ -431,6 +480,7 @@ export function ChannelPartnersPage() {
       ...form,
       targetAmount: Number(form.targetAmount) || 0,
       gstin: form.gstin || undefined,
+      country: form.country || "India",
     });
   }
 
@@ -441,6 +491,7 @@ export function ChannelPartnersPage() {
         ...form,
         targetAmount: Number(form.targetAmount) || 0,
         gstin: form.gstin || undefined,
+        country: form.country || "India",
       },
     });
   }
@@ -534,8 +585,9 @@ export function ChannelPartnersPage() {
                     contactName: p.contactName,
                     contactPhone: p.contactPhone,
                     contactEmail: p.contactEmail,
-                    city: p.city,
+                    country: (p as any).country ?? "India",
                     state: p.state,
+                    city: p.city,
                     targetAmount: String(p.targetAmount),
                     gstin: (p as any).gstin ?? "",
                   };
