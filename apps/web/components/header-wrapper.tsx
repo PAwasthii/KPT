@@ -7,6 +7,7 @@ import { Badge } from "@repo/ui/components/ui/badge"
 import { useState } from "react"
 import { ChangePasswordModal } from "./change-password-modal"
 import { NotificationDropdown } from "./notification-dropdown"
+import { useCurrency, MAJOR_CURRENCIES } from "../contexts/CurrencyContext"
 
 interface HeaderWrapperProps {
   icon?: React.ReactNode
@@ -22,6 +23,7 @@ export function HeaderWrapper({
   const { user, logout } = useAuth()
   const { data: health, isLoading: healthLoading } = useHealth()
   const [showChangePassword, setShowChangePassword] = useState(false)
+  const { currency, symbol, updateCurrency } = useCurrency()
 
   if (!user) return null
 
@@ -53,7 +55,23 @@ export function HeaderWrapper({
             </div>
           )
         }
-        notificationSlot={hideNotifications ? undefined : <NotificationDropdown />}
+        notificationSlot={
+          <div className="flex items-center gap-2">
+            <select
+              value={currency}
+              onChange={(e) => updateCurrency(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              aria-label="Currency"
+            >
+              {MAJOR_CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.symbol} {c.code}
+                </option>
+              ))}
+            </select>
+            {!hideNotifications && <NotificationDropdown />}
+          </div>
+        }
         user={{
           name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown User",
           email: user.email || "No email provided",

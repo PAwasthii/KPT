@@ -16,6 +16,9 @@ router.get('/:id/incentives', channelPartnerController.getIncentives.bind(channe
 // POST /api/kpt/channel-partners — create partner
 router.post('/', channelPartnerController.create.bind(channelPartnerController));
 
+// POST /api/kpt/channel-partners/bulk-import — bulk create/update from spreadsheet
+router.post('/bulk-import', channelPartnerController.bulkImport.bind(channelPartnerController));
+
 // POST /api/kpt/channel-partners/:id/incentives — create incentive for partner
 router.post('/:id/incentives', channelPartnerController.createIncentive.bind(channelPartnerController));
 

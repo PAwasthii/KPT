@@ -276,6 +276,7 @@ export interface Contact {
 export interface Account {
   id: number;
   name: string;
+  gstin?: string;
   industry?: string;
   website?: string;
   phone?: string;

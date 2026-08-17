@@ -215,6 +215,16 @@ export function useUpdatePartner() {
   });
 }
 
+export function useBulkImportPartners() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (partners: Array<Record<string, any>>) => kptPartnerService.bulkImport(partners),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: kptKeys.partners.all });
+    },
+  });
+}
+
 export function useDeletePartner() {
   const queryClient = useQueryClient();
   return useMutation({

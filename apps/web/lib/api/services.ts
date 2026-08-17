@@ -1892,6 +1892,11 @@ export const kptPartnerService = {
     return response.data;
   },
 
+  bulkImport: async (partners: Array<Record<string, any>>) => {
+    const response = await apiClient.post('/api/kpt/channel-partners/bulk-import', { partners });
+    return response.data;
+  },
+
   delete: async (id: number) => {
     const response = await apiClient.delete(`/api/kpt/channel-partners/${id}`);
     return response.data;

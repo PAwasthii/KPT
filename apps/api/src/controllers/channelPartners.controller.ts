@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
-import { AuditCategory } from '@prisma/client';
+import { AuditCategory, PartnerType, PartnerTier, PartnerStatus } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError } from '../utils/errorHandler.js';
 import { recordAuditLog } from '../utils/audit.utils.js';
 
@@ -274,6 +274,98 @@ export class ChannelPartnerController {
       return res.json({ success: true, message: 'Channel partner deleted successfully' });
     } catch (error) {
       handleError(error, res, 'Delete channel partner');
+    }
+  }
+
+  /**
+   * POST /api/kpt/channel-partners/bulk-import
+   * Bulk create/update partners from parsed spreadsheet rows
+   */
+  async bulkImport(req: Request, res: Response) {
+    try {
+      const { partners } = req.body;
+
+      if (!Array.isArray(partners) || partners.length === 0) {
+        return handleValidationError(res, 'partners must be a non-empty array', 'partners', 'Bulk import partners');
+      }
+
+      if (partners.length > 500) {
+        return handleValidationError(res, 'Maximum 500 partners per import', 'partners', 'Bulk import partners');
+      }
+
+      let created = 0;
+      let updated = 0;
+      const errors: string[] = [];
+
+      for (const raw of partners) {
+        const code = String(raw.code ?? '').trim();
+        const name = String(raw.name ?? '').trim();
+
+        if (!name) {
+          errors.push(`Skipped row — missing Name`);
+          continue;
+        }
+
+        const type = ['DISTRIBUTOR', 'DEALER', 'RETAILER'].includes(String(raw.type ?? '').toUpperCase())
+          ? String(raw.type).toUpperCase()
+          : 'DEALER';
+        const tier = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM'].includes(String(raw.tier ?? '').toUpperCase())
+          ? String(raw.tier).toUpperCase()
+          : 'BRONZE';
+
+        const data = {
+          name,
+          type: type as PartnerType,
+          tier: tier as PartnerTier,
+          status: 'ACTIVE' as PartnerStatus,
+          contactName: String(raw.contactName ?? '').trim() || name,
+          contactPhone: String(raw.contactPhone ?? '').trim(),
+          contactEmail: raw.contactEmail ? String(raw.contactEmail).trim() : null,
+          city: String(raw.city ?? '').trim(),
+          state: String(raw.state ?? '').trim(),
+          region: raw.region ? String(raw.region).trim() : null,
+          gstin: raw.gstin ? String(raw.gstin).toUpperCase().trim() : null,
+          targetAmount: raw.targetAmount !== undefined ? Number(raw.targetAmount) : 0,
+          creditLimit: 0,
+          outstandingPayment: 0,
+          currentMonthSales: 0,
+          ytdSales: 0,
+        };
+
+        if (code) {
+          const existing = await prisma.channelPartner.findFirst({ where: { code } });
+          if (existing) {
+            await prisma.channelPartner.update({ where: { id: existing.id }, data: { ...data, code } });
+            updated++;
+            continue;
+          }
+        }
+
+        // Check by name if no code or code not found
+        const existingByName = await prisma.channelPartner.findFirst({ where: { name } });
+        if (existingByName) {
+          await prisma.channelPartner.update({ where: { id: existingByName.id }, data });
+          updated++;
+        } else {
+          await prisma.channelPartner.create({
+            data: { ...data, code: code || `CP-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}` },
+          });
+          created++;
+        }
+      }
+
+      await recordAuditLog({
+        action: 'PARTNER_BULK_IMPORT',
+        changedBy: req.user!.id,
+        entityType: 'ChannelPartner',
+        entityId: 0,
+        newValues: { created, updated, errors: errors.length },
+        category: AuditCategory.SALES_MANAGEMENT,
+      });
+
+      return res.json({ success: true, data: { created, updated, errors } });
+    } catch (error) {
+      handleError(error, res, 'Bulk import partners');
     }
   }
 

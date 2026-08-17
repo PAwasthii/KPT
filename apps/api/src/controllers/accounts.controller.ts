@@ -223,7 +223,7 @@ export class AccountController {
         return handleValidationError(res, 'Account ID must be a valid number', 'id', 'Update account');
       }
 
-      const { name, website, phone, description, industry } = req.body || {};
+      const { name, website, phone, description, industry, gstin } = req.body || {};
 
       // Minimal validation for common fields
       if (name !== undefined && typeof name !== 'string') {
@@ -241,6 +241,9 @@ export class AccountController {
       if (industry !== undefined && typeof industry !== 'string') {
         return handleValidationError(res, 'Industry must be a string', 'industry', 'Update account');
       }
+      if (gstin !== undefined && gstin !== null && typeof gstin !== 'string') {
+        return handleValidationError(res, 'GSTIN must be a string', 'gstin', 'Update account');
+      }
 
       const updated = await prisma.account.update({
         where: { id: accountId },
@@ -250,6 +253,7 @@ export class AccountController {
           ...(phone !== undefined ? { phone } : {}),
           ...(description !== undefined ? { description } : {}),
           ...(industry !== undefined ? { industry } : {}),
+          ...(gstin !== undefined ? { gstin: gstin || null } : {}),
         },
         include: {
           contacts: true,

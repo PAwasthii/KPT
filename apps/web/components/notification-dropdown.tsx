@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Bell, CheckCheck, Loader2 } from "lucide-react"
+
+import { Bell, CheckCheck, Loader2, X } from "lucide-react"
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -18,6 +18,18 @@ const TYPE_ICONS: Record<string, string> = {
   APPROVAL_REJECTED: "❌",
   QUOTE_ACCEPTED: "🤝",
   ORDER_CREATED: "🛒",
+  INVENTORY_CREATED: "📦",
+  INVENTORY_BULK_IMPORT: "📥",
+  INVENTORY_LOW_STOCK: "⚠️",
+  INVENTORY_CRITICAL_STOCK: "🔴",
+  INVENTORY_OUT_OF_STOCK: "🚫",
+  STOCK_DISPATCHED: "🚚",
+  STOCK_LOW_ALERT: "⚠️",
+  STOCK_CRITICAL_ALERT: "🔴",
+  STOCK_OUT_OF_STOCK: "🚫",
+  PASSWORD_CHANGED: "🔐",
+  PASSWORD_CHANGE_FAILED: "⛔",
+  PASSWORD_RESET: "🔑",
   GENERAL: "🔔",
 }
 
@@ -32,17 +44,79 @@ function timeAgo(iso: string) {
   return `${days}d ago`
 }
 
-function NotificationItem({
+function NotificationModal({
   notification,
-  onRead,
+  onClose,
 }: {
   notification: AppNotification
-  onRead: (id: number, link: string | null) => void
+  onClose: () => void
+}) {
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm mx-4 bg-white rounded-2xl shadow-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close X */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 h-7 w-7 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Icon + Title */}
+        <div className="flex items-start gap-3 mb-4">
+          <span className="text-2xl flex-shrink-0">{TYPE_ICONS[notification.type] ?? "🔔"}</span>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm leading-snug pr-6">
+              {notification.title}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">{timeAgo(notification.createdAt)}</p>
+          </div>
+        </div>
+
+        {/* Message */}
+        <p className="text-sm text-gray-600 leading-relaxed mb-6">{notification.message}</p>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NotificationItem({
+  notification,
+  onSelect,
+}: {
+  notification: AppNotification
+  onSelect: (n: AppNotification) => void
 }) {
   return (
     <button
       type="button"
-      onClick={() => onRead(notification.id, notification.link)}
+      onClick={() => onSelect(notification)}
       className={`w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 ${
         !notification.isRead ? "bg-brand-pale-aqua/60" : ""
       }`}
@@ -65,8 +139,8 @@ function NotificationItem({
 }
 
 export function NotificationDropdown() {
-  const router = useRouter()
   const [open, setOpen] = React.useState(false)
+  const [selected, setSelected] = React.useState<AppNotification | null>(null)
   const ref = React.useRef<HTMLDivElement>(null)
 
   const { data, isLoading } = useNotifications()
@@ -76,7 +150,7 @@ export function NotificationDropdown() {
   const unreadCount = data?.unreadCount ?? 0
   const notifications = data?.data ?? []
 
-  // Close on outside click
+  // Close dropdown on outside click
   React.useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -87,80 +161,85 @@ export function NotificationDropdown() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [open])
 
-  function handleRead(id: number, link: string | null) {
-    markRead.mutate(id)
-    if (link) {
-      setOpen(false)
-      router.push(link)
-    }
+  function handleSelect(notification: AppNotification) {
+    if (!notification.isRead) markRead.mutate(notification.id)
+    setOpen(false)
+    setSelected(notification)
   }
 
   return (
-    <div ref={ref} className="relative">
-      {/* Bell button */}
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="relative h-10 w-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-        aria-label="Notifications"
-      >
-        <Bell className="h-5 w-5 text-gray-600" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 h-5 w-5 flex items-center justify-center rounded-full bg-destructive text-white text-[10px] font-bold leading-none">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {/* Dropdown panel */}
-      {open && (
-        <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <span className="font-semibold text-sm text-gray-800">
-              Notifications
-              {unreadCount > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center h-5 px-1.5 rounded-full bg-brand-pale-aqua text-brand-teal text-xs font-bold">
-                  {unreadCount}
-                </span>
-              )}
+    <>
+      <div ref={ref} className="relative">
+        {/* Bell button */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="relative h-10 w-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+          aria-label="Notifications"
+        >
+          <Bell className="h-5 w-5 text-gray-600" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-5 w-5 flex items-center justify-center rounded-full bg-destructive text-white text-[10px] font-bold leading-none">
+              {unreadCount > 99 ? "99+" : unreadCount}
             </span>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={() => markAllRead.mutate()}
-                disabled={markAllRead.isPending}
-                className="flex items-center gap-1 text-xs text-brand-teal hover:text-brand-indigo font-medium disabled:opacity-50"
-              >
-                {markAllRead.isPending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <CheckCheck className="h-3.5 w-3.5" />
-                )}
-                Mark all read
-              </button>
-            )}
-          </div>
+          )}
+        </button>
 
-          {/* List */}
-          <div className="max-h-[420px] overflow-y-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
-                <Bell className="h-8 w-8 opacity-30" />
-                <p className="text-sm">No notifications yet</p>
-              </div>
-            ) : (
-              notifications.map((n) => (
-                <NotificationItem key={n.id} notification={n} onRead={handleRead} />
-              ))
-            )}
+        {/* Dropdown panel */}
+        {open && (
+          <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <span className="font-semibold text-sm text-gray-800">
+                Notifications
+                {unreadCount > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center h-5 px-1.5 rounded-full bg-brand-pale-aqua text-brand-teal text-xs font-bold">
+                    {unreadCount}
+                  </span>
+                )}
+              </span>
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markAllRead.mutate()}
+                  disabled={markAllRead.isPending}
+                  className="flex items-center gap-1 text-xs text-brand-teal hover:text-brand-indigo font-medium disabled:opacity-50"
+                >
+                  {markAllRead.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <CheckCheck className="h-3.5 w-3.5" />
+                  )}
+                  Mark all read
+                </button>
+              )}
+            </div>
+
+            {/* List */}
+            <div className="max-h-[420px] overflow-y-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2 text-gray-400">
+                  <Bell className="h-8 w-8 opacity-30" />
+                  <p className="text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <NotificationItem key={n.id} notification={n} onSelect={handleSelect} />
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Detail popup */}
+      {selected && (
+        <NotificationModal notification={selected} onClose={() => setSelected(null)} />
       )}
-    </div>
+    </>
   )
 }

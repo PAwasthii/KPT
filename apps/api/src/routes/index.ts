@@ -37,6 +37,7 @@ import inventoryRoutes from './inventory.routes.js';
 import incentiveSlabRoutes from './incentiveSlabs.routes.js';
 import performanceRoutes from './performance.routes.js';
 import auditLogRoutes from './auditLogs.routes.js';
+import gstRoutes from './gst.routes.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
 export function setupRoutes(app: Express) {
@@ -117,6 +118,9 @@ export function setupRoutes(app: Express) {
   app.use('/api/kpt/stock', requireAuth, stockRoutes);
   app.use('/api/kpt/incentive-slabs', requireAuth, incentiveSlabRoutes);
   app.use('/api/kpt/performance', requireAuth, performanceRoutes);
+
+  // GST verification (any authenticated user)
+  app.use('/api/gst', requireAuth, gstRoutes);
 
   // Audit logs (SYSTEM_ADMIN only)
   app.use('/api/audit-logs', requireAuth, auditLogRoutes);

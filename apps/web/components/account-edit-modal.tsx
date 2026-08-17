@@ -5,9 +5,12 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Button } from "@repo/ui/components/ui/button"
 import { Input } from "@repo/ui/components/ui/input"
 import { Label } from "@repo/ui/components/ui/label"
+import { GstinInput } from "@/components/gstin-input"
+import type { GstDetails } from "@/lib/api/types"
 
 export type AccountEditValues = {
   name: string
+  gstin?: string
   website?: string
   email?: string
   phone?: string
@@ -65,6 +68,20 @@ export const AccountEditModal: React.FC<AccountEditModalProps> = ({ open, onOpen
               <Label>Phone</Label>
               <Input value={values.phone || ""} onChange={(e) => setValues(v => ({ ...v, phone: e.target.value }))} />
             </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>GSTIN</Label>
+            <GstinInput
+              value={values.gstin || ""}
+              onChange={(gstin) => setValues(v => ({ ...v, gstin }))}
+              onVerified={(details: GstDetails) => {
+                setValues(v => ({
+                  ...v,
+                  gstin: v.gstin,
+                  name: v.name || details.legalName,
+                }))
+              }}
+            />
           </div>
         </div>
         <DialogFooterAny>

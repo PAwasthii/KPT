@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import {
   Card,
   CardContent,
@@ -21,13 +22,16 @@ import {
   DialogFooter,
   Label,
 } from "@repo/ui";
-import { Users, MapPin, TrendingUp, Phone, Mail, Plus, Pencil } from "lucide-react";
+import { Users, MapPin, TrendingUp, Phone, Mail, Plus, Pencil, Upload, Download } from "lucide-react";
 import {
   usePartners,
   useCreatePartner,
   useUpdatePartner,
+  useBulkImportPartners,
 } from "../../hooks/useKpt";
 import { useCurrency } from "../../contexts/CurrencyContext";
+import { GstinInput } from "../gstin-input";
+import type { GstDetails } from "../../lib/api/types";
 
 interface ChannelPartner {
   id: number;
@@ -92,6 +96,7 @@ interface PartnerFormState {
   city: string;
   state: string;
   targetAmount: string;
+  gstin: string;
 }
 
 const EMPTY_FORM: PartnerFormState = {
@@ -105,6 +110,7 @@ const EMPTY_FORM: PartnerFormState = {
   city: "",
   state: "",
   targetAmount: "",
+  gstin: "",
 };
 
 function PartnerFormDialog({
@@ -202,6 +208,21 @@ function PartnerFormDialog({
             </div>
           </div>
           <div className="space-y-1.5">
+            <Label>GSTIN</Label>
+            <GstinInput
+              value={form.gstin}
+              onChange={(v) => set("gstin", v)}
+              onVerified={(d: GstDetails) => {
+                setForm((f) => ({
+                  ...f,
+                  name: f.name || d.legalName,
+                  city: f.city || d.city || "",
+                  state: f.state || d.state || "",
+                }));
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label>Target Amount ({symbol})</Label>
             <Input
               type="number"
@@ -217,6 +238,152 @@ function PartnerFormDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const PARTNER_HEADER_MAP: Record<string, string> = {
+  "name": "name",
+  "partner name": "name",
+  "code": "code",
+  "partner code": "code",
+  "type": "type",
+  "partner type": "type",
+  "tier": "tier",
+  "contact name": "contactName",
+  "contactname": "contactName",
+  "contact": "contactName",
+  "phone": "contactPhone",
+  "contact phone": "contactPhone",
+  "mobile": "contactPhone",
+  "email": "contactEmail",
+  "contact email": "contactEmail",
+  "city": "city",
+  "state": "state",
+  "region": "region",
+  "gstin": "gstin",
+  "gst": "gstin",
+  "gst number": "gstin",
+  "target": "targetAmount",
+  "target amount": "targetAmount",
+  "targetamount": "targetAmount",
+};
+
+function ImportPartnersDialog() {
+  const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<any[] | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [parseError, setParseError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const bulkImport = useBulkImportPartners();
+
+  const parseFile = (file: File) => {
+    setParseError("");
+    setPreview(null);
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0] ?? ""];
+        if (!ws) { setParseError("Could not read sheet from file."); return; }
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        if (rows.length < 2) { setParseError("File must have a header row and at least one data row."); return; }
+
+        const headers = (rows[0] as string[]).map((h) => String(h ?? "").toLowerCase().trim());
+        const mapped = rows.slice(1).map((row: any[]) => {
+          const obj: Record<string, any> = {};
+          headers.forEach((h, i) => {
+            const field = PARTNER_HEADER_MAP[h];
+            if (field) obj[field] = row[i] ?? "";
+          });
+          return obj;
+        }).filter((r) => r.name);
+
+        if (mapped.length === 0) {
+          setParseError("No valid rows found. Check that a 'Name' column exists.");
+          return;
+        }
+        setPreview(mapped);
+      } catch {
+        setParseError("Could not parse file. Please use a valid .xlsx or .csv file.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleImport = async () => {
+    if (!preview) return;
+    await bulkImport.mutateAsync(preview);
+    setPreview(null);
+    setFileName("");
+    setOpen(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setPreview(null);
+    setFileName("");
+    setParseError("");
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["Name", "Code", "Type", "Tier", "Contact Name", "Phone", "Email", "City", "State", "GSTIN", "Target Amount"],
+      ["Shree Ganesh Tools", "DIST-MH-001", "DISTRIBUTOR", "GOLD", "Suresh Patil", "9823456789", "suresh@sgtools.in", "Pune", "Maharashtra", "27AABCS1429B1Z5", 3600000],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Partners");
+    XLSX.writeFile(wb, "kpt_partners_template.xlsx");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="flex items-center gap-1.5">
+          <Upload className="h-4 w-4" /> Import Partners
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Import Partners from Excel / CSV</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Upload an <span className="font-medium">.xlsx</span> or <span className="font-medium">.csv</span> file.
+            Existing partners (matched by Code or Name) will be updated; new ones will be created.
+          </p>
+          <Button size="sm" variant="ghost" className="text-xs underline p-0 h-auto" onClick={downloadTemplate}>
+            <Download className="h-3 w-3 mr-1" /> Download template
+          </Button>
+          <div>
+            <Label>Select File</Label>
+            <Input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) parseFile(f); }}
+              className="cursor-pointer"
+            />
+          </div>
+          {parseError && <p className="text-sm text-red-600">{parseError}</p>}
+          {preview && (
+            <div className="rounded-md border p-3 bg-muted/40 text-sm space-y-1">
+              <p className="font-medium">Ready to import from <span className="text-primary">{fileName}</span></p>
+              <p className="text-muted-foreground">{preview.length} partner{preview.length !== 1 ? "s" : ""} detected</p>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleImport} disabled={!preview || bulkImport.isPending}>
+            {bulkImport.isPending ? "Importing…" : `Import ${preview ? preview.length + " partners" : ""}`}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -263,6 +430,7 @@ export function ChannelPartnersPage() {
     createPartner.mutate({
       ...form,
       targetAmount: Number(form.targetAmount) || 0,
+      gstin: form.gstin || undefined,
     });
   }
 
@@ -272,6 +440,7 @@ export function ChannelPartnersPage() {
       data: {
         ...form,
         targetAmount: Number(form.targetAmount) || 0,
+        gstin: form.gstin || undefined,
       },
     });
   }
@@ -283,7 +452,9 @@ export function ChannelPartnersPage() {
           <h1 className="text-2xl font-bold text-foreground">Channel Partners</h1>
           <p className="text-sm text-muted-foreground">Manage your KPT distribution network</p>
         </div>
-        <PartnerFormDialog
+        <div className="flex items-center gap-2">
+          <ImportPartnersDialog />
+          <PartnerFormDialog
           title="Add Channel Partner"
           trigger={
             <Button className="flex items-center gap-2">
@@ -293,6 +464,7 @@ export function ChannelPartnersPage() {
           onSubmit={handleCreate}
           isPending={createPartner.isPending}
         />
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -365,6 +537,7 @@ export function ChannelPartnersPage() {
                     city: p.city,
                     state: p.state,
                     targetAmount: String(p.targetAmount),
+                    gstin: (p as any).gstin ?? "",
                   };
 
                   return (

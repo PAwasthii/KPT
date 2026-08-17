@@ -731,6 +731,7 @@ export const AccountDetailPage = React.memo(function AccountDetailPage({
         onOpenChange={setEditModalOpen}
         initialValues={{
           name: safeEditedAccount.name,
+          gstin: (apiAccount as any)?.gstin || '',
           website: safeEditedAccount.website === 'N/A' ? '' : safeEditedAccount.website,
           email: (apiAccount as any)?.email || '',
           phone: safeEditedAccount.phone === 'N/A' ? '' : safeEditedAccount.phone,
@@ -743,6 +744,7 @@ export const AccountDetailPage = React.memo(function AccountDetailPage({
             if (typeof vals.name === 'string' && vals.name.trim().length > 0) payload.name = vals.name.trim()
             if (typeof vals.website === 'string' && vals.website.trim().length > 0) payload.website = vals.website.trim()
             if (typeof vals.phone === 'string' && vals.phone.trim().length > 0) payload.phone = vals.phone.trim()
+            if (typeof vals.gstin === 'string') payload.gstin = vals.gstin.trim() || undefined
             // Do not send email; not supported by account update API
 
             await updateAccountMutation.mutateAsync({ id: accountId, data: payload })
