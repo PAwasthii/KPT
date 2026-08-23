@@ -6,13 +6,15 @@ import { UserRole } from '@prisma/client';
 const router = Router();
 const pricebookController = new PriceBookController();
 
-router.use(requireAuth);
-router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN]));
+const viewRoles = [UserRole.SYSTEM_ADMIN, UserRole.ADMIN, UserRole.SALES];
+const manageRoles = [UserRole.SYSTEM_ADMIN, UserRole.ADMIN];
 
-router.get('/', pricebookController.getAllPriceBooks.bind(pricebookController));
-router.get('/:id', pricebookController.getPriceBookById.bind(pricebookController));
-router.post('/', pricebookController.createPriceBook.bind(pricebookController));
-router.put('/:id', pricebookController.updatePriceBook.bind(pricebookController));
-router.delete('/:id', pricebookController.deletePriceBook.bind(pricebookController));
+router.use(requireAuth);
+
+router.get('/', requireRole(viewRoles), pricebookController.getAllPriceBooks.bind(pricebookController));
+router.get('/:id', requireRole(viewRoles), pricebookController.getPriceBookById.bind(pricebookController));
+router.post('/', requireRole(manageRoles), pricebookController.createPriceBook.bind(pricebookController));
+router.put('/:id', requireRole(manageRoles), pricebookController.updatePriceBook.bind(pricebookController));
+router.delete('/:id', requireRole(manageRoles), pricebookController.deletePriceBook.bind(pricebookController));
 
 export default router;

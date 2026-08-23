@@ -11,8 +11,11 @@ import {
   QuoteStatus,
   QuoteType,
   SalesOrderStatus,
+  FinanceInvoiceStatus,
+  FinanceBudgetType,
+  FinanceBudgetDimension,
 } from "@prisma/client";
-import { PartnerType, PartnerTier, PartnerStatus, IncentiveStatus, StockStatus, AuditCategory } from '@prisma/client';
+import { PartnerType, PartnerTier, PartnerStatus, IncentiveStatus, StockStatus, AuditCategory, MovementType } from '@prisma/client';
 
 // Use DIRECT_URL for seeding to avoid PgBouncer prepared statement issues
 const prisma = new PrismaClient({
@@ -60,10 +63,22 @@ async function main() {
 
   // Destructive reset in FK-safe order (sequential to avoid prepared statement conflicts with connection poolers)
   // Opportunity-Quote-Order tables (delete in reverse dependency order)
+  await prisma.financeInvoiceItem.deleteMany({});
+  await prisma.financeInvoice.deleteMany({});
+  await prisma.financeBudget.deleteMany({});
+  await prisma.financeIntegrationLog.deleteMany({});
   await prisma.salesOrderLineItem.deleteMany({});
+  await prisma.stockMovement.deleteMany({});
   await prisma.stockEntry.deleteMany({});
+  await prisma.inventoryItem.deleteMany({});
   await prisma.partnerIncentive.deleteMany({});
   await prisma.channelPartner.deleteMany({});
+  await prisma.kptApprovalLog.deleteMany({});
+  await prisma.kptDocument.deleteMany({});
+  await prisma.kptFieldVerification.deleteMany({});
+  await prisma.kptStatusHistory.deleteMany({});
+  await prisma.kptAgreement.deleteMany({});
+  await prisma.kptPartner.deleteMany({});
   await prisma.incentiveSlab.deleteMany({});
   await prisma.salesOrder.deleteMany({});
   await prisma.quoteLineItem.deleteMany({});
@@ -131,7 +146,7 @@ async function main() {
   // 1. SYSTEM_ADMIN User
   const superAdminUser = await prisma.user.upsert({
     where: { email: "superadmin@example.com" },
-    update: {},
+    update: { passwordHash, authProvider: 'PASSWORD' },
     create: {
       firstName: "Super",
       lastName: "Admin",
@@ -146,7 +161,7 @@ async function main() {
   // 2. ADMIN User
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@example.com" },
-    update: {},
+    update: { passwordHash, authProvider: 'PASSWORD' },
     create: {
       firstName: "Admin",
       lastName: "User",
@@ -162,7 +177,7 @@ async function main() {
   // Note: Email and password should match your .env file for developer login
   const developerUser = await prisma.user.upsert({
     where: { email: "developer@example.com" },
-    update: {},
+    update: { passwordHash, authProvider: 'PASSWORD' },
     create: {
       firstName: "Developer",
       lastName: "Access",
@@ -174,28 +189,59 @@ async function main() {
     },
   });
 
+  // Innov Global super-admins
+  const innovHash = '$2a$10$F/GK8v0tQc.SUJnHm4SN/eq8fFZWzaVeWzG4p5XD1kycSqVLyVwZW'; // Innov@2026
+  await prisma.user.upsert({
+    where: { email: 'raj.s@innovunglobal.com' },
+    update: { passwordHash: innovHash, authProvider: 'PASSWORD', role: UserRole.SYSTEM_ADMIN },
+    create: {
+      firstName: 'Raj',
+      lastName: 'S',
+      email: 'raj.s@innovunglobal.com',
+      passwordHash: innovHash,
+      role: UserRole.SYSTEM_ADMIN,
+      region: null,
+      countryCode: '91',
+    },
+  });
+  await prisma.user.upsert({
+    where: { email: 'nisha.d@innovunglobal.com' },
+    update: { passwordHash: innovHash, authProvider: 'PASSWORD', role: UserRole.SYSTEM_ADMIN },
+    create: {
+      firstName: 'Nisha',
+      lastName: 'D',
+      email: 'nisha.d@innovunglobal.com',
+      passwordHash: innovHash,
+      role: UserRole.SYSTEM_ADMIN,
+      region: null,
+      countryCode: '91',
+    },
+  });
+
+  const kptAdminHash = '$2a$10$9CtOl1aRnTY21.H3CDjiXuC6o38zojtV4DKSajSYDTBjvcZ4yMbja'; // KPT@Admin2026
   const kptAdminUser = await prisma.user.upsert({
     where: { email: 'admin@kpt.co.in' },
-    update: {},
+    update: { passwordHash: kptAdminHash, authProvider: 'PASSWORD' },
     create: {
       firstName: 'Rajesh',
       lastName: 'Kulkarni',
       email: 'admin@kpt.co.in',
-      passwordHash: '$2a$10$9CtOl1aRnTY21.H3CDjiXuC6o38zojtV4DKSajSYDTBjvcZ4yMbja', // KPT@Admin2026
+      passwordHash: kptAdminHash,
       role: UserRole.ADMIN,
       region: Region.WEST_1,
       countryCode: '91',
     },
   });
 
+  const kptManagerHash = '$2a$10$DaPCphdL/R.kQtC4isPyGeat12YtnInBHI6SViAxJWA/CA88h.TB.'; // KPT@Manager2026
   const kptManagerUser = await prisma.user.upsert({
     where: { email: 'manager@kpt.co.in' },
-    update: {},
+    update: { passwordHash: kptManagerHash, authProvider: 'PASSWORD' },
     create: {
       firstName: 'Priya',
       lastName: 'Sharma',
       email: 'manager@kpt.co.in',
-      passwordHash: '$2a$10$DaPCphdL/R.kQtC4isPyGeat12YtnInBHI6SViAxJWA/CA88h.TB.', // KPT@Manager2026
+      passwordHash: kptManagerHash,
       role: UserRole.SALES,
       region: Region.WEST_1,
       countryCode: '91',
@@ -212,7 +258,7 @@ async function main() {
     salesUserProfiles.map(profile =>
       prisma.user.upsert({
         where: { email: profile.email },
-        update: {},
+        update: { passwordHash, authProvider: 'PASSWORD' },
         create: {
           firstName: profile.firstName,
           lastName: profile.lastName,
@@ -229,7 +275,7 @@ async function main() {
 
   const marketingUser = await prisma.user.upsert({
     where: { email: "mike.marketing@example.com" },
-    update: {},
+    update: { passwordHash, authProvider: 'PASSWORD' },
     create: {
       firstName: "Mike",
       lastName: "Marketing",
@@ -1326,29 +1372,75 @@ async function main() {
 
   console.log('\n🤝 Seeding KPT Channel Partners, Stock & Incentives...\n');
 
+  // KPT SKU master — single source of truth for all KPT products
+  const kptSkus = [
+    { productName: 'KPT 100mm Angle Grinder KPT-AG4', sku: 'KPT-AG4-001', category: 'Grinders', unitPrice: 2850 },
+    { productName: 'KPT 115mm Angle Grinder KPT-AG5', sku: 'KPT-AG5-001', category: 'Grinders', unitPrice: 3200 },
+    { productName: 'KPT 180mm Angle Grinder KPT-AG7', sku: 'KPT-AG7-001', category: 'Grinders', unitPrice: 5400 },
+    { productName: 'KPT 13mm Impact Drill KPT-ID13', sku: 'KPT-ID13-001', category: 'Drills', unitPrice: 3600 },
+    { productName: 'KPT SDS Plus Rotary Hammer KPT-SDS', sku: 'KPT-SDS-001', category: 'Drills', unitPrice: 8500 },
+    { productName: 'KPT Demolition Hammer KPT-DH', sku: 'KPT-DH-001', category: 'Hammers', unitPrice: 12500 },
+    { productName: 'KPT Cordless Drill 18V KPT-CD18', sku: 'KPT-CD18-001', category: 'Drills', unitPrice: 6200 },
+    { productName: 'KPT Impact Wrench KPT-IW', sku: 'KPT-IW-001', category: 'Others', unitPrice: 7200 },
+  ];
+
   // Incentive Slabs
   await prisma.incentiveSlab.createMany({
     data: [
-      { tier: PartnerTier.BRONZE, minSaleAmount: 0, maxSaleAmount: 500000, incentivePercent: 2.0, description: 'Bronze tier — up to ₹5L monthly sales', isActive: true },
-      { tier: PartnerTier.SILVER, minSaleAmount: 500001, maxSaleAmount: 1500000, incentivePercent: 3.5, description: 'Silver tier — ₹5L–₹15L monthly sales', isActive: true },
-      { tier: PartnerTier.GOLD, minSaleAmount: 1500001, maxSaleAmount: 3000000, incentivePercent: 5.0, description: 'Gold tier — ₹15L–₹30L monthly sales', isActive: true },
-      { tier: PartnerTier.PLATINUM, minSaleAmount: 3000001, maxSaleAmount: null, incentivePercent: 7.0, description: 'Platinum tier — above ₹30L monthly sales', isActive: true },
+      { tier: PartnerTier.BRONZE,   minSaleAmount: 0,       maxSaleAmount: 500000,  incentivePercent: 2.0, description: 'Bronze tier — up to ₹5L monthly sales',     isActive: true },
+      { tier: PartnerTier.SILVER,   minSaleAmount: 500001,  maxSaleAmount: 1500000, incentivePercent: 3.5, description: 'Silver tier — ₹5L–₹15L monthly sales',      isActive: true },
+      { tier: PartnerTier.GOLD,     minSaleAmount: 1500001, maxSaleAmount: 3000000, incentivePercent: 5.0, description: 'Gold tier — ₹15L–₹30L monthly sales',       isActive: true },
+      { tier: PartnerTier.PLATINUM, minSaleAmount: 3000001, maxSaleAmount: null,    incentivePercent: 7.0, description: 'Platinum tier — above ₹30L monthly sales',  isActive: true },
     ],
   });
 
+  const createdSlabs = await prisma.incentiveSlab.findMany({ orderBy: { minSaleAmount: 'asc' } });
+  const slabByTier: Record<string, (typeof createdSlabs)[0] | undefined> = {
+    BRONZE:   createdSlabs.find(s => s.tier === PartnerTier.BRONZE),
+    SILVER:   createdSlabs.find(s => s.tier === PartnerTier.SILVER),
+    GOLD:     createdSlabs.find(s => s.tier === PartnerTier.GOLD),
+    PLATINUM: createdSlabs.find(s => s.tier === PartnerTier.PLATINUM),
+  };
+
   // Channel Partners
-  const partnerData = [
-    { code: 'DIST-MH-001', name: 'Shree Ganesh Industrial Tools', type: PartnerType.DISTRIBUTOR, tier: PartnerTier.GOLD, contactName: 'Suresh Patil', contactPhone: '9823456789', contactEmail: 'suresh@sgtools.in', city: 'Pune', state: 'Maharashtra', region: 'West', ytdSales: 2850000, targetAmount: 3600000 },
-    { code: 'DIST-MH-002', name: 'Mahalaxmi Hardware & Tools', type: PartnerType.DISTRIBUTOR, tier: PartnerTier.SILVER, contactName: 'Ramesh Desai', contactPhone: '9812345678', contactEmail: 'ramesh@mahalaxmitools.com', city: 'Kolhapur', state: 'Maharashtra', region: 'West', ytdSales: 1650000, targetAmount: 2400000 },
-    { code: 'DIST-KA-001', name: 'Kaveri Tools & Equipment', type: PartnerType.DISTRIBUTOR, tier: PartnerTier.GOLD, contactName: 'Kiran Hegde', contactPhone: '9876543210', contactEmail: 'kiran@kaveritools.co.in', city: 'Belgaum', state: 'Karnataka', region: 'South', ytdSales: 2200000, targetAmount: 2800000 },
-    { code: 'DLRA-MH-001', name: 'Aarav Engineering Supplies', type: PartnerType.DEALER, tier: PartnerTier.SILVER, contactName: 'Anil Jadhav', contactPhone: '9765432109', contactEmail: null, city: 'Satara', state: 'Maharashtra', region: 'West', ytdSales: 920000, targetAmount: 1200000 },
-    { code: 'DLRA-MH-002', name: 'Vishwakarma Power Tools', type: PartnerType.DEALER, tier: PartnerTier.BRONZE, contactName: 'Vijay Shinde', contactPhone: '9654321098', contactEmail: null, city: 'Sangli', state: 'Maharashtra', region: 'West', ytdSales: 380000, targetAmount: 600000 },
-    { code: 'DLRA-MH-003', name: 'Om Sai Hardware Store', type: PartnerType.DEALER, tier: PartnerTier.BRONZE, contactName: 'Santosh More', contactPhone: '9543210987', contactEmail: null, city: 'Solapur', state: 'Maharashtra', region: 'West', ytdSales: 410000, targetAmount: 600000 },
-    { code: 'DLRA-KA-001', name: 'Siddharth Industrial Corp', type: PartnerType.DEALER, tier: PartnerTier.SILVER, contactName: 'Ravi Kumar', contactPhone: '9432109876', contactEmail: 'ravi@sidindustrials.in', city: 'Hubli', state: 'Karnataka', region: 'South', ytdSales: 780000, targetAmount: 1000000 },
-    { code: 'DLRA-GOA-001', name: 'Konkan Power Equipment', type: PartnerType.DEALER, tier: PartnerTier.BRONZE, contactName: 'Deepak Naik', contactPhone: '9321098765', contactEmail: null, city: 'Panaji', state: 'Goa', region: 'West', ytdSales: 290000, targetAmount: 500000 },
+  // KptPartner applications: 8 activated + 3 pending (stage 1-3) + 3 eligible (stage 4+)
+  const kptApplicationData = [
+    // 8 activated — linked to ChannelPartners via CRN
+    { crn: 'KPT-CP-2026-00001', ownerName: 'Suresh Patil',   firmName: 'Shree Ganesh Industrial Tools', mobile: '9823456789', email: 'suresh@sgtools.in',          city: 'Pune',      state: 'Maharashtra', pincode: '411001', currentStage: 5, status: 'activated' },
+    { crn: 'KPT-CP-2026-00002', ownerName: 'Ramesh Desai',   firmName: 'Mahalaxmi Hardware & Tools',    mobile: '9812345678', email: 'ramesh@mahalaxmitools.com',   city: 'Kolhapur',  state: 'Maharashtra', pincode: '416001', currentStage: 5, status: 'activated' },
+    { crn: 'KPT-CP-2026-00003', ownerName: 'Kiran Hegde',    firmName: 'Kaveri Tools & Equipment',      mobile: '9876543210', email: 'kiran@kaveritools.co.in',     city: 'Belgaum',   state: 'Karnataka',   pincode: '590001', currentStage: 5, status: 'activated' },
+    { crn: 'KPT-CP-2026-00004', ownerName: 'Anil Jadhav',    firmName: 'Aarav Engineering Supplies',    mobile: '9765432109', email: 'anil@aaraveng.com',           city: 'Satara',    state: 'Maharashtra', pincode: '415001', currentStage: 4, status: 'activated' },
+    { crn: 'KPT-CP-2026-00005', ownerName: 'Vijay Shinde',   firmName: 'Vishwakarma Power Tools',       mobile: '9654321098', email: 'vijay@vkpowertools.com',      city: 'Sangli',    state: 'Maharashtra', pincode: '416416', currentStage: 4, status: 'activated' },
+    { crn: 'KPT-CP-2026-00006', ownerName: 'Santosh More',   firmName: 'Om Sai Hardware Store',         mobile: '9543210987', email: 'santosh@omsaihardware.com',   city: 'Solapur',   state: 'Maharashtra', pincode: '413001', currentStage: 4, status: 'activated' },
+    { crn: 'KPT-CP-2026-00007', ownerName: 'Ravi Kumar',     firmName: 'Siddharth Industrial Corp',     mobile: '9432109876', email: 'ravi@sidindustrials.in',      city: 'Hubli',     state: 'Karnataka',   pincode: '580020', currentStage: 4, status: 'activated' },
+    { crn: 'KPT-CP-2026-00008', ownerName: 'Deepak Naik',    firmName: 'Konkan Power Equipment',        mobile: '9321098765', email: 'deepak@konkanpower.com',      city: 'Panaji',    state: 'Goa',         pincode: '403001', currentStage: 4, status: 'activated' },
+    // 3 pending / in-progress (stage 1-3) — do NOT appear in eligible-applications dropdown
+    { crn: 'KPT-CP-2026-00009', ownerName: 'Prashant Jagtap', firmName: 'Jagtap Tools & Hardware',     mobile: '9210987654', email: 'prashant@jagtaptools.com',    city: 'Nashik',    state: 'Maharashtra', pincode: '422001', currentStage: 2, status: 'visit_scheduled' },
+    { crn: 'KPT-CP-2026-00010', ownerName: 'Meena Kulkarni',  firmName: 'Kulkarni Power Centre',       mobile: '9109876543', email: 'meena@kulkarnipowers.com',    city: 'Aurangabad', state: 'Maharashtra', pincode: '431001', currentStage: 1, status: 'enquiry_received' },
+    { crn: 'KPT-CP-2026-00011', ownerName: 'Harish Gowda',    firmName: 'Gowda Industrial Suppliers',  mobile: '9098765432', email: 'harish@gowdaindustrial.in',   city: 'Mysore',    state: 'Karnataka',   pincode: '570001', currentStage: 3, status: 'docs_submitted' },
+    // 3 approved but not yet activated (stage 4+) — appear in eligible-applications dropdown
+    { crn: 'KPT-CP-2026-00012', ownerName: 'Bhaskar Rao',     firmName: 'Rao Engineering Works',       mobile: '8987654321', email: 'bhaskar@raoengworks.com',     city: 'Hyderabad', state: 'Telangana',   pincode: '500001', currentStage: 5, status: 'approved' },
+    { crn: 'KPT-CP-2026-00013', ownerName: 'Sunita Pawar',    firmName: 'Pawar Industrial Hardware',   mobile: '8876543210', email: 'sunita@pawarindustrial.com',  city: 'Nanded',    state: 'Maharashtra', pincode: '431601', currentStage: 4, status: 'approved' },
+    { crn: 'KPT-CP-2026-00014', ownerName: 'Girish Nair',     firmName: 'Nair Tools & Machinery',      mobile: '8765432109', email: 'girish@nairtools.in',          city: 'Kochi',     state: 'Kerala',      pincode: '682001', currentStage: 4, status: 'approved' },
   ];
 
-  const kptPartners = [];
+  for (const app of kptApplicationData) {
+    await prisma.kptPartner.create({ data: app });
+  }
+
+  const partnerData = [
+    { crn: 'KPT-CP-2026-00001', code: 'DIST-MH-001', name: 'Shree Ganesh Industrial Tools', type: PartnerType.DISTRIBUTOR, tier: PartnerTier.GOLD,     contactName: 'Suresh Patil',  contactPhone: '9823456789', contactEmail: 'suresh@sgtools.in',        city: 'Pune',     state: 'Maharashtra', region: 'West',  targetAmount: 3600000 },
+    { crn: 'KPT-CP-2026-00002', code: 'DIST-MH-002', name: 'Mahalaxmi Hardware & Tools',    type: PartnerType.DISTRIBUTOR, tier: PartnerTier.SILVER,   contactName: 'Ramesh Desai',  contactPhone: '9812345678', contactEmail: 'ramesh@mahalaxmitools.com', city: 'Kolhapur', state: 'Maharashtra', region: 'West',  targetAmount: 2400000 },
+    { crn: 'KPT-CP-2026-00003', code: 'DIST-KA-001', name: 'Kaveri Tools & Equipment',       type: PartnerType.DISTRIBUTOR, tier: PartnerTier.GOLD,     contactName: 'Kiran Hegde',   contactPhone: '9876543210', contactEmail: 'kiran@kaveritools.co.in',  city: 'Belgaum',  state: 'Karnataka',   region: 'South', targetAmount: 2800000 },
+    { crn: 'KPT-CP-2026-00004', code: 'DLRA-MH-001', name: 'Aarav Engineering Supplies',     type: PartnerType.DEALER,      tier: PartnerTier.SILVER,   contactName: 'Anil Jadhav',   contactPhone: '9765432109', contactEmail: null,                       city: 'Satara',   state: 'Maharashtra', region: 'West',  targetAmount: 1200000 },
+    { crn: 'KPT-CP-2026-00005', code: 'DLRA-MH-002', name: 'Vishwakarma Power Tools',        type: PartnerType.DEALER,      tier: PartnerTier.BRONZE,   contactName: 'Vijay Shinde',  contactPhone: '9654321098', contactEmail: null,                       city: 'Sangli',   state: 'Maharashtra', region: 'West',  targetAmount: 600000  },
+    { crn: 'KPT-CP-2026-00006', code: 'DLRA-MH-003', name: 'Om Sai Hardware Store',          type: PartnerType.DEALER,      tier: PartnerTier.BRONZE,   contactName: 'Santosh More',  contactPhone: '9543210987', contactEmail: null,                       city: 'Solapur',  state: 'Maharashtra', region: 'West',  targetAmount: 600000  },
+    { crn: 'KPT-CP-2026-00007', code: 'DLRA-KA-001', name: 'Siddharth Industrial Corp',      type: PartnerType.DEALER,      tier: PartnerTier.SILVER,   contactName: 'Ravi Kumar',    contactPhone: '9432109876', contactEmail: 'ravi@sidindustrials.in',   city: 'Hubli',    state: 'Karnataka',   region: 'South', targetAmount: 1000000 },
+    { crn: 'KPT-CP-2026-00008', code: 'DLRA-GOA-001', name: 'Konkan Power Equipment',         type: PartnerType.DEALER,      tier: PartnerTier.BRONZE,   contactName: 'Deepak Naik',   contactPhone: '9321098765', contactEmail: null,                       city: 'Panaji',   state: 'Goa',         region: 'West',  targetAmount: 500000  },
+  ];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const kptPartners: any[] = [];
   for (const p of partnerData) {
     const partner = await prisma.channelPartner.create({
       data: {
@@ -1363,28 +1455,160 @@ async function main() {
         city: p.city,
         state: p.state,
         region: p.region,
+        crn: p.crn,
+        activatedAt: new Date(),
         creditLimit: p.type === PartnerType.DISTRIBUTOR ? 1000000 : 300000,
-        outstandingPayment: Math.floor(Math.random() * 200000),
-        currentMonthSales: Math.floor(p.ytdSales / 8),
-        ytdSales: p.ytdSales,
+        outstandingPayment: 0,
+        currentMonthSales: 0,
+        ytdSales: 0,
         targetAmount: p.targetAmount,
       },
     });
-    kptPartners.push(partner);
+    kptPartners.push({ ...p, id: partner.id });
   }
 
-  // Stock entries per partner
-  const kptSkus = [
-    { productName: 'KPT 100mm Angle Grinder KPT-AG4', sku: 'KPT-AG4-001', category: 'Grinders', unitPrice: 2850 },
-    { productName: 'KPT 115mm Angle Grinder KPT-AG5', sku: 'KPT-AG5-001', category: 'Grinders', unitPrice: 3200 },
-    { productName: 'KPT 180mm Angle Grinder KPT-AG7', sku: 'KPT-AG7-001', category: 'Grinders', unitPrice: 5400 },
-    { productName: 'KPT 13mm Impact Drill KPT-ID13', sku: 'KPT-ID13-001', category: 'Drills', unitPrice: 3600 },
-    { productName: 'KPT SDS Plus Rotary Hammer KPT-SDS', sku: 'KPT-SDS-001', category: 'Drills', unitPrice: 8500 },
-    { productName: 'KPT Demolition Hammer KPT-DH', sku: 'KPT-DH-001', category: 'Hammers', unitPrice: 12500 },
-    { productName: 'KPT Cordless Drill 18V KPT-CD18', sku: 'KPT-CD18-001', category: 'Drills', unitPrice: 6200 },
-    { productName: 'KPT Impact Wrench KPT-IW', sku: 'KPT-IW-001', category: 'Others', unitPrice: 7200 },
-  ];
+  // ── InventoryItems: warehouse master stock ────────────────────────────────
+  const invItemMap = new Map<string, { id: number; totalQty: number }>();
+  for (const sku of kptSkus) {
+    const warehouseQty = randInt(200, 500);
+    const invItem = await prisma.inventoryItem.create({
+      data: {
+        productName: sku.productName,
+        sku: sku.sku,
+        category: sku.category,
+        totalQty: warehouseQty,
+        minStockQty: 50,
+        reorderQty: 100,
+        unitPrice: sku.unitPrice,
+        stockStatus: StockStatus.HEALTHY,
+      },
+    });
+    invItemMap.set(sku.sku, { id: invItem.id, totalQty: warehouseQty });
 
+    // Link to Product record if one exists with matching code
+    const linkedProduct = products.find(p => p.code === sku.sku);
+    if (linkedProduct) {
+      await prisma.inventoryItem.update({
+        where: { id: invItem.id },
+        data: { productId: linkedProduct.id },
+      });
+    }
+  }
+
+  // ── Partner SalesOrders: 3–4 per partner, spread across Jan–Aug 2026 ─────
+  const kptDistAccount = await prisma.account.create({
+    data: { name: 'KPT Distribution Network' },
+  });
+
+  // Slice products array to get only KPT power tool products (first 8)
+  const kptProducts = products.slice(0, 8);
+  let partnerOrderNum = 1;
+
+  interface PartnerOrderRec { partnerId: number; orderId: number; grandTotal: number; orderDate: Date }
+  const partnerOrders: PartnerOrderRec[] = [];
+
+  // Spread orders across 8 months: [month(1-based), day]
+  const orderSlots = [
+    [1,15],[2,10],[3,20],[4,5],[5,18],[6,12],[7,8],[8,3],
+    [1,28],[2,25],[3,5],[4,22],[5,3],[6,28],[7,25],[8,15],
+    [2,8],[3,28],[4,10],[5,25],[6,5],[7,18],[8,22],[1,5],
+    [3,15],[4,28],[5,10],[6,20],[7,3],[8,28],[1,22],[2,18],
+  ];
+  let slotIdx = 0;
+
+  for (const partner of kptPartners) {
+    const numOrders = partner.type === PartnerType.DISTRIBUTOR ? 4 : 3;
+    for (let oi = 0; oi < numOrders; oi++) {
+      const [month, day] = orderSlots[slotIdx++ % orderSlots.length];
+      const orderDate = new Date(2026, (month as number) - 1, day as number);
+      const numItems = randInt(2, 4);
+      const selectedProds = [...kptProducts].sort(() => Math.random() - 0.5).slice(0, numItems);
+
+      let subtotal = 0;
+      const lineItems = selectedProds.map((prod, idx) => {
+        const qty = randInt(5, 30);
+        const total = qty * prod.price;
+        subtotal += total;
+        return {
+          productId: prod.id,
+          quantity: qty,
+          listPrice: prod.price,
+          unitPrice: prod.price,
+          discount: 0,
+          totalPrice: total,
+          sortOrder: idx,
+        };
+      });
+      const taxAmount = Math.round(subtotal * 0.18);
+      const grandTotal = subtotal + taxAmount;
+
+      const orderStatus = oi === 0
+        ? SalesOrderStatus.DELIVERED
+        : oi === 1
+          ? SalesOrderStatus.SHIPPED
+          : SalesOrderStatus.APPROVED;
+
+      const order = await prisma.salesOrder.create({
+        data: {
+          orderNumber: `KPT-26${String(month).padStart(2,'0')}-${String(partnerOrderNum++).padStart(4,'0')}`,
+          name: `${partner.name} — Dist. Order ${oi + 1}`,
+          status: orderStatus,
+          subtotal,
+          discount: 0,
+          discountPercent: 0,
+          taxAmount,
+          taxPercent: 18,
+          shippingAmount: 0,
+          grandTotal,
+          orderDate,
+          expectedShipDate: new Date(orderDate.getTime() + 7 * 86400000),
+          actualShipDate: orderStatus !== SalesOrderStatus.APPROVED ? new Date(orderDate.getTime() + 5 * 86400000) : null,
+          expectedDeliveryDate: new Date(orderDate.getTime() + 14 * 86400000),
+          actualDeliveryDate: orderStatus === SalesOrderStatus.DELIVERED ? new Date(orderDate.getTime() + 12 * 86400000) : null,
+          approvedAt: new Date(orderDate.getTime() + 2 * 86400000),
+          billingName: partner.name,
+          billingCity: partner.city,
+          billingState: partner.state,
+          billingCountry: 'India',
+          shippingName: partner.name,
+          shippingCity: partner.city,
+          shippingState: partner.state,
+          shippingCountry: 'India',
+          paymentTerms: 'Net 30',
+          deliveryTerms: 'Within 2 weeks',
+          accountId: kptDistAccount.id,
+          ownerId: kptAdminUser.id,
+          approvedById: kptAdminUser.id,
+          channelPartnerId: partner.id,
+          lineItems: { create: lineItems },
+        },
+      });
+
+      partnerOrders.push({ partnerId: partner.id, orderId: order.id, grandTotal, orderDate });
+    }
+  }
+
+  console.log(`  ✓ Created ${partnerOrders.length} partner-linked sales orders`);
+
+  // Update ytdSales from actual orders (derived, not hardcoded)
+  const ytdCutoff = new Date('2026-01-01');
+  for (const partner of kptPartners) {
+    const ytdOrders = partnerOrders.filter(o => o.partnerId === partner.id && o.orderDate >= ytdCutoff);
+    const ytdSales = ytdOrders.reduce((sum, o) => sum + o.grandTotal, 0);
+    const now = new Date();
+    const monthOrders = partnerOrders.filter(o =>
+      o.partnerId === partner.id &&
+      o.orderDate.getFullYear() === now.getFullYear() &&
+      o.orderDate.getMonth() === now.getMonth()
+    );
+    const currentMonthSales = monthOrders.reduce((sum, o) => sum + o.grandTotal, 0);
+    await prisma.channelPartner.update({
+      where: { id: partner.id },
+      data: { ytdSales, currentMonthSales },
+    });
+  }
+
+  // ── Stock entries per partner (linked to InventoryItems) ──────────────────
   function getStockStatus(qty: number, minQty: number): StockStatus {
     if (qty === 0) return StockStatus.OUT_OF_STOCK;
     if (qty <= 5) return StockStatus.CRITICAL;
@@ -1392,15 +1616,22 @@ async function main() {
     return StockStatus.HEALTHY;
   }
 
+  // Track running warehouse qty per SKU for movement records
+  const warehouseQtyRemaining = new Map<string, number>(
+    kptSkus.map(s => [s.sku, invItemMap.get(s.sku)!.totalQty])
+  );
+
   for (const partner of kptPartners) {
     const numSkus = partner.type === PartnerType.DISTRIBUTOR ? 8 : randInt(4, 6);
     const selectedSkus = kptSkus.slice(0, numSkus);
     for (const sku of selectedSkus) {
       const minQty = partner.type === PartnerType.DISTRIBUTOR ? 20 : 10;
       const stockQty = randInt(0, 40);
-      await prisma.stockEntry.create({
+      const invEntry = invItemMap.get(sku.sku);
+      const stockEntry = await prisma.stockEntry.create({
         data: {
           partnerId: partner.id,
+          inventoryItemId: invEntry?.id ?? null,
           productName: sku.productName,
           sku: sku.sku,
           category: sku.category,
@@ -1411,21 +1642,76 @@ async function main() {
           stockStatus: getStockStatus(stockQty, minQty),
         },
       });
+
+      // Create StockMovement (DISPATCH: warehouse → partner)
+      if (invEntry && stockQty > 0) {
+        const qtyBefore = warehouseQtyRemaining.get(sku.sku) ?? invEntry.totalQty;
+        const qtyAfter = Math.max(0, qtyBefore - stockQty);
+        warehouseQtyRemaining.set(sku.sku, qtyAfter);
+        await prisma.stockMovement.create({
+          data: {
+            inventoryItemId: invEntry.id,
+            stockEntryId: stockEntry.id,
+            partnerId: partner.id,
+            movementType: MovementType.DISPATCH,
+            quantity: stockQty,
+            qtyBefore,
+            qtyAfter,
+            reference: `DISP-${partner.code}-${sku.sku}`,
+            notes: 'Initial stock dispatch to partner',
+            createdBy: kptAdminUser.id,
+          },
+        });
+      }
     }
   }
 
-  // Partner Incentives for last 3 months
+  // Update InventoryItem.totalQty to reflect actual warehouse stock after dispatches
+  for (const [sku, remaining] of warehouseQtyRemaining.entries()) {
+    const invEntry = invItemMap.get(sku);
+    if (invEntry) {
+      await prisma.inventoryItem.update({
+        where: { id: invEntry.id },
+        data: {
+          totalQty: remaining,
+          stockStatus: getStockStatus(remaining, 50),
+        },
+      });
+    }
+  }
+
+  // Partner Incentives for last 3 months (with slab FK)
   const months = ['2026-05', '2026-06', '2026-07'];
   for (const partner of kptPartners) {
+    const slab = slabByTier[partner.tier];
+    const incentivePercent = slab?.incentivePercent ??
+      (partner.tier === PartnerTier.GOLD || partner.tier === PartnerTier.PLATINUM ? 5.0 :
+       partner.tier === PartnerTier.SILVER ? 3.5 : 2.0);
+
     for (const period of months) {
-      const salesAmount = Math.floor(partner.ytdSales / 8 * (0.8 + Math.random() * 0.4));
-      const incentivePercent = partner.tier === PartnerTier.GOLD || partner.tier === PartnerTier.PLATINUM ? 5.0 : partner.tier === PartnerTier.SILVER ? 3.5 : 2.0;
+      // Derive salesAmount from partner orders for that month
+      const [periodYear, periodMonth] = period.split('-').map(Number);
+      const periodOrders = partnerOrders.filter(o =>
+        o.partnerId === partner.id &&
+        o.orderDate.getFullYear() === periodYear &&
+        o.orderDate.getMonth() + 1 === periodMonth
+      );
+      const salesAmount = periodOrders.length > 0
+        ? Math.round(periodOrders.reduce((sum, o) => sum + o.grandTotal, 0))
+        : Math.round(partner.targetAmount / 8 * (0.7 + Math.random() * 0.5));
+
       const incentiveAmount = Math.floor(salesAmount * incentivePercent / 100);
-      const statusChoices = period === '2026-05' ? [IncentiveStatus.PAID, IncentiveStatus.APPROVED] : period === '2026-06' ? [IncentiveStatus.APPROVED, IncentiveStatus.UNDER_REVIEW] : [IncentiveStatus.PENDING, IncentiveStatus.UNDER_REVIEW];
+      const statusChoices = period === '2026-05'
+        ? [IncentiveStatus.PAID, IncentiveStatus.APPROVED]
+        : period === '2026-06'
+          ? [IncentiveStatus.APPROVED, IncentiveStatus.UNDER_REVIEW]
+          : [IncentiveStatus.PENDING, IncentiveStatus.UNDER_REVIEW];
       const status = statusChoices[Math.floor(Math.random() * statusChoices.length)];
+
       await prisma.partnerIncentive.create({
         data: {
           partnerId: partner.id,
+          slabId: slab?.id ?? null,
           period,
           salesAmount,
           incentivePercent,
@@ -1439,7 +1725,7 @@ async function main() {
     }
   }
 
-  console.log(`  ✓ Seeded ${kptPartners.length} channel partners with stock and incentive records`);
+  console.log(`  ✓ Seeded ${kptPartners.length} channel partners with linked orders, stock, movements & incentives`);
 
   // Fetch back actual IDs so audit logs reference real entities
   const kptPartnerIds = kptPartners.map(p => p.id);
@@ -1582,6 +1868,117 @@ async function main() {
   }
 
   console.log(`  ✓ Seeded ${kptAuditEntries.length} KPT audit log entries across a 30-day timeline`);
+
+  // ─── FINANCE MODULE SEED ──────────────────────────────────────────────────────
+  console.log("\n  📊 Seeding Finance module data...");
+
+  // Clear existing finance data
+  await prisma.financeInvoiceItem.deleteMany({});
+  await prisma.financeInvoice.deleteMany({});
+  await prisma.financeBudget.deleteMany({});
+  await prisma.financeIntegrationLog.deleteMany({});
+
+  // Invoices — 14 invoices linked to the 8 channel partners
+  const invoiceData = [
+    { partnerId: kptPartners[0].id, partner: kptPartners[0], invoiceNumber: 'KPT-INV-00001', status: FinanceInvoiceStatus.PAID,           daysAgo: 150, totalAmount: 285000, paidAmount: 285000, region: kptPartners[0].region },
+    { partnerId: kptPartners[2].id, partner: kptPartners[2], invoiceNumber: 'KPT-INV-00002', status: FinanceInvoiceStatus.PAID,           daysAgo: 140, totalAmount: 220000, paidAmount: 220000, region: kptPartners[2].region },
+    { partnerId: kptPartners[1].id, partner: kptPartners[1], invoiceNumber: 'KPT-INV-00003', status: FinanceInvoiceStatus.PAID,           daysAgo: 110, totalAmount: 165000, paidAmount: 165000, region: kptPartners[1].region },
+    { partnerId: kptPartners[3].id, partner: kptPartners[3], invoiceNumber: 'KPT-INV-00004', status: FinanceInvoiceStatus.PAID,           daysAgo: 95,  totalAmount: 92000,  paidAmount: 92000,  region: kptPartners[3].region },
+    { partnerId: kptPartners[0].id, partner: kptPartners[0], invoiceNumber: 'KPT-INV-00005', status: FinanceInvoiceStatus.ISSUED,         daysAgo: 60,  totalAmount: 310000, paidAmount: 0,      region: kptPartners[0].region },
+    { partnerId: kptPartners[2].id, partner: kptPartners[2], invoiceNumber: 'KPT-INV-00006', status: FinanceInvoiceStatus.ISSUED,         daysAgo: 45,  totalAmount: 195000, paidAmount: 0,      region: kptPartners[2].region },
+    { partnerId: kptPartners[6].id, partner: kptPartners[6], invoiceNumber: 'KPT-INV-00007', status: FinanceInvoiceStatus.ISSUED,         daysAgo: 30,  totalAmount: 78000,  paidAmount: 0,      region: kptPartners[6].region },
+    { partnerId: kptPartners[4].id, partner: kptPartners[4], invoiceNumber: 'KPT-INV-00008', status: FinanceInvoiceStatus.OVERDUE,        daysAgo: 75,  totalAmount: 38000,  paidAmount: 0,      region: kptPartners[4].region },
+    { partnerId: kptPartners[5].id, partner: kptPartners[5], invoiceNumber: 'KPT-INV-00009', status: FinanceInvoiceStatus.OVERDUE,        daysAgo: 65,  totalAmount: 41000,  paidAmount: 0,      region: kptPartners[5].region },
+    { partnerId: kptPartners[1].id, partner: kptPartners[1], invoiceNumber: 'KPT-INV-00010', status: FinanceInvoiceStatus.PARTIALLY_PAID, daysAgo: 50,  totalAmount: 180000, paidAmount: 80000,  region: kptPartners[1].region },
+    { partnerId: kptPartners[0].id, partner: kptPartners[0], invoiceNumber: 'KPT-INV-00011', status: FinanceInvoiceStatus.PARTIALLY_PAID, daysAgo: 35,  totalAmount: 245000, paidAmount: 100000, region: kptPartners[0].region },
+    { partnerId: kptPartners[7].id, partner: kptPartners[7], invoiceNumber: 'KPT-INV-00012', status: FinanceInvoiceStatus.DRAFT,          daysAgo: 5,   totalAmount: 29000,  paidAmount: 0,      region: kptPartners[7].region },
+    { partnerId: kptPartners[3].id, partner: kptPartners[3], invoiceNumber: 'KPT-INV-00013', status: FinanceInvoiceStatus.CANCELLED,      daysAgo: 80,  totalAmount: 56000,  paidAmount: 0,      region: kptPartners[3].region },
+    { partnerId: kptPartners[2].id, partner: kptPartners[2], invoiceNumber: 'KPT-INV-00014', status: FinanceInvoiceStatus.PAID,           daysAgo: 20,  totalAmount: 240000, paidAmount: 240000, region: kptPartners[2].region },
+  ];
+
+  const createdInvoices = [];
+  for (const inv of invoiceData) {
+    const invoiceDate = new Date();
+    invoiceDate.setDate(invoiceDate.getDate() - inv.daysAgo);
+    const dueDate = new Date(invoiceDate);
+    dueDate.setDate(dueDate.getDate() + 30);
+
+    const subtotal = Math.round(Number(inv.totalAmount) / 1.18);
+    const taxAmount = Number(inv.totalAmount) - subtotal;
+
+    const created = await prisma.financeInvoice.create({
+      data: {
+        invoiceNumber: inv.invoiceNumber,
+        invoiceDate,
+        dueDate,
+        status: inv.status,
+        partnerId: inv.partnerId,
+        billingName: inv.partner.name,
+        billingAddress: `${inv.partner.city || ''}, ${inv.partner.state || ''}`.trim(),
+        gstin: inv.partner.gstin || null,
+        region: inv.region || null,
+        subtotal,
+        taxAmount,
+        taxPercent: 18,
+        discountAmount: 0,
+        totalAmount: inv.totalAmount,
+        paidAmount: inv.paidAmount,
+        paymentDate: inv.status === FinanceInvoiceStatus.PAID ? dueDate : null,
+        paymentMethod: inv.paidAmount > 0 ? 'NEFT' : null,
+        createdBy: superAdminUser.id,
+      },
+    });
+
+    // Add 2 line items per invoice
+    await prisma.financeInvoiceItem.createMany({
+      data: [
+        { invoiceId: created.id, sku: 'KPT-AG5-001', description: 'KPT 115mm Angle Grinder KPT-AG5', quantity: Math.round(subtotal * 0.6 / 3200), unitPrice: 3200, lineTotal: Math.round(subtotal * 0.6) },
+        { invoiceId: created.id, sku: 'KPT-ID13-001', description: 'KPT 13mm Impact Drill KPT-ID13', quantity: Math.round(subtotal * 0.4 / 3600), unitPrice: 3600, lineTotal: Math.round(subtotal * 0.4) },
+      ],
+    });
+
+    createdInvoices.push(created);
+  }
+  console.log(`  ✓ Seeded ${createdInvoices.length} finance invoices with line items`);
+
+  // Budgets — monthly REVENUE budgets Jan–Aug 2026 + regional + incentive
+  const budgetData = [
+    // Monthly revenue budgets (2026)
+    { year: 2026, month: 1,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2200000, notes: 'Jan 2026 revenue target' },
+    { year: 2026, month: 2,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2500000, notes: 'Feb 2026 revenue target' },
+    { year: 2026, month: 3,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2800000, notes: 'Mar 2026 — peak season' },
+    { year: 2026, month: 4,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2600000, notes: 'Apr 2026 revenue target' },
+    { year: 2026, month: 5,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2700000, notes: 'May 2026 revenue target' },
+    { year: 2026, month: 6,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2400000, notes: 'Jun 2026 revenue target' },
+    { year: 2026, month: 7,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2300000, notes: 'Jul 2026 revenue target' },
+    { year: 2026, month: 8,  budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 2500000, notes: 'Aug 2026 revenue target' },
+    // Annual REVENUE by region
+    { year: 2026, month: null, budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.REGION, dimensionValue: 'West',  budgetAmount: 12000000, notes: 'West region annual target' },
+    { year: 2026, month: null, budgetType: FinanceBudgetType.REVENUE, dimensionType: FinanceBudgetDimension.REGION, dimensionValue: 'South', budgetAmount: 8000000,  notes: 'South region annual target' },
+    // Annual incentive budget
+    { year: 2026, month: null, budgetType: FinanceBudgetType.INCENTIVE, dimensionType: FinanceBudgetDimension.TOTAL, budgetAmount: 1500000, notes: 'Total incentive payout budget 2026' },
+  ];
+
+  for (const b of budgetData) {
+    await prisma.financeBudget.create({
+      data: {
+        year: b.year,
+        month: b.month ?? null,
+        budgetType: b.budgetType,
+        dimensionType: b.dimensionType,
+        dimensionValue: b.dimensionValue ?? null,
+        budgetAmount: b.budgetAmount,
+        notes: b.notes,
+        createdBy: superAdminUser.id,
+      },
+    });
+  }
+  console.log(`  ✓ Seeded ${budgetData.length} finance budget records`);
+
+  // Integration log stub
+  await prisma.financeIntegrationLog.create({
+    data: { provider: 'MANUAL', action: 'SYSTEM_INIT', status: 'SUCCESS', initiatedBy: superAdminUser.id },
+  });
 
   // Log all created user credentials for easy reference
   console.log("\n" + "=".repeat(80));

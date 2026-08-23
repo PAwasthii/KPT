@@ -24,6 +24,10 @@ router.post('/create-test-admin', authController.createTestAdmin);
 // POST /api/auth/create-system-admin - Protected by ADMIN-SECRET
 router.post('/create-system-admin', requireAdminSecret, (req, res) => authController.createSystemAdmin(req, res));
 
+// Email OTP login
+router.post('/otp/send', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, keyGenerator: (req) => String(req.body?.email || '') }), (req, res) => authController.sendOtpLogin(req, res));
+router.post('/otp/verify', rateLimit({ windowMs: 10 * 60 * 1000, max: 10, keyGenerator: (req) => String(req.body?.email || '') }), (req, res) => authController.verifyOtpLogin(req, res));
+
 // Forgot password (OTP via email)
 router.post('/forgot-password', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, keyGenerator: (req) => String(req.body?.email || '') }), authController.forgotPassword);
 router.post('/forgot-password/verify', rateLimit({ windowMs: 10 * 60 * 1000, max: 10, keyGenerator: (req) => String(req.body?.email || '') }), authController.verifyForgotPassword);

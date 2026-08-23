@@ -268,6 +268,11 @@ export class OpportunityController {
 
       const whereClause: Prisma.OpportunityWhereInput = { deletedAt: null };
 
+      // SALES users only see their own opportunities
+      if (req.user!.role === UserRole.SALES) {
+        whereClause.ownerId = req.user!.id;
+      }
+
       if (stage) {
         const stageArray = stage.toString().split(',') as OpportunityStage[];
         whereClause.stage = stageArray.length === 1 ? stageArray[0] : { in: stageArray };
@@ -579,6 +584,11 @@ export class OpportunityController {
         where: { id: opportunityId },
       });
       if (!existing || existing.deletedAt) {
+        return handleNotFoundError(res, 'Opportunity', operation);
+      }
+
+      // SALES users can only update their own opportunities
+      if (req.user!.role === UserRole.SALES && existing.ownerId !== userId) {
         return handleNotFoundError(res, 'Opportunity', operation);
       }
 
@@ -1005,6 +1015,11 @@ export class OpportunityController {
         return handleNotFoundError(res, 'Opportunity', operation);
       }
 
+      // SALES users can only access their own opportunities
+      if (req.user!.role === UserRole.SALES && opportunity.ownerId !== req.user!.id) {
+        return handleNotFoundError(res, 'Opportunity', operation);
+      }
+
       return res.json({ data: opportunity });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -1030,7 +1045,12 @@ export class OpportunityController {
         if (!existing || existing.deletedAt) {
           return handleNotFoundError(res, 'Opportunity', operation);
         }
-  
+
+        // SALES users can only delete their own opportunities
+        if (req.user!.role === UserRole.SALES && existing.ownerId !== req.user!.id) {
+          return handleNotFoundError(res, 'Opportunity', operation);
+        }
+
         await prisma.opportunity.update({
           where: { id: opportunityId },
           data: { deletedAt: new Date() },

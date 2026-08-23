@@ -7,7 +7,7 @@ const router = Router();
 const salesOrderController = new SalesOrderController();
 
 router.use(requireAuth);
-router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN]));
+router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN, UserRole.SALES]));
 
 // GET /api/sales-orders - List all sales orders (paginated)
 router.get('/', salesOrderController.getAllSalesOrders.bind(salesOrderController));

@@ -56,18 +56,8 @@ export class UserController {
       if (region) {
         whereClause.region = region as Region;
       }
-      // Exclude developer account if configured (case-insensitive) and innovunglobal.com users
+      // Exclude developer account if configured (case-insensitive)
       const andFilters: any[] = [];
-
-      // Exclude innovunglobal.com email domain users
-      andFilters.push({
-        NOT: {
-          email: {
-            endsWith: '@innovunglobal.com',
-            mode: 'insensitive',
-          }
-        }
-      });
 
       if (developerEmail) {
         andFilters.push({
@@ -287,25 +277,33 @@ export class UserController {
 
       const sendCredentialEmail = shouldSendCredentialEmail(role as UserRole);
 
-      // Send email with credentials (async, don't wait for it)
+      let emailSent = false;
       if (sendCredentialEmail) {
         const fullName = [firstName, lastName].filter(Boolean).join(' ');
-        emailService.sendUserCreationEmail({
+        emailSent = await emailService.sendUserCreationEmail({
           name: fullName,
           email: normalizedEmail,
           password: generatedPassword,
           role,
         }).catch(error => {
           console.error('Failed to send user creation email:', error);
+          return false;
         });
       }
 
-      // Return user data (without password hash)
+      let message: string;
+      if (!sendCredentialEmail) {
+        message = 'User created successfully.';
+      } else if (emailSent) {
+        message = 'User created successfully. Login credentials have been sent to their email.';
+      } else {
+        message = 'User created successfully, but the welcome email could not be delivered. Check RESEND_API_KEY and RESEND_FROM_EMAIL configuration.';
+      }
+
       res.status(201).json({
         ...user,
-        message: sendCredentialEmail
-          ? 'User created successfully. Login credentials have been sent to their email.'
-          : 'User created successfully.',
+        message,
+        emailSent: sendCredentialEmail ? emailSent : undefined,
       });
     } catch (error) {
       handleError(error, res, 'Create user');

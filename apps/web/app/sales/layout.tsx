@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Synkro CRM",
-  description: "Synkro CRM",
+  title: "KPT CRM",
+  description: "KPT CRM",
 };
 
 export default function SalesLayout({

@@ -180,7 +180,7 @@ export default function UserManagementPage() {
     error: usersError 
   } = useUsersWithPagination(userFilters);
 
-  // Map users to the format expected by the component (innovunglobal.com users are filtered by backend)
+  // Map users to the format expected by the component
   const mappedUsers = useMemo(() => {
     return users.map((u) => ({
       id: u.id.toString(),

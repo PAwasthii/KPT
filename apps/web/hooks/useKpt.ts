@@ -6,14 +6,14 @@ import { kptPartnerService, kptStockService, kptIncentiveSlabService, kptPerform
 // ============================================
 const STATIC_PARTNERS = {
   data: [
-    { id: 1, code: 'DIST-MH-001', name: 'Shree Ganesh Industrial Tools', type: 'DISTRIBUTOR', tier: 'GOLD', status: 'ACTIVE', contactName: 'Suresh Patil', contactPhone: '9823456789', contactEmail: 'suresh@sgtools.in', city: 'Pune', state: 'Maharashtra', region: 'West', currentMonthSales: 356250, ytdSales: 2850000, targetAmount: 3600000, creditLimit: 1000000, outstandingPayment: 145000 },
-    { id: 2, code: 'DIST-MH-002', name: 'Mahalaxmi Hardware & Tools', type: 'DISTRIBUTOR', tier: 'SILVER', status: 'ACTIVE', contactName: 'Ramesh Desai', contactPhone: '9812345678', contactEmail: 'ramesh@mahalaxmi.com', city: 'Kolhapur', state: 'Maharashtra', region: 'West', currentMonthSales: 206250, ytdSales: 1650000, targetAmount: 2400000, creditLimit: 1000000, outstandingPayment: 89000 },
-    { id: 3, code: 'DIST-KA-001', name: 'Kaveri Tools & Equipment', type: 'DISTRIBUTOR', tier: 'GOLD', status: 'ACTIVE', contactName: 'Kiran Hegde', contactPhone: '9876543210', contactEmail: 'kiran@kaveritools.in', city: 'Belgaum', state: 'Karnataka', region: 'South', currentMonthSales: 275000, ytdSales: 2200000, targetAmount: 2800000, creditLimit: 1000000, outstandingPayment: 112000 },
-    { id: 4, code: 'DLRA-MH-001', name: 'Aarav Engineering Supplies', type: 'DEALER', tier: 'SILVER', status: 'ACTIVE', contactName: 'Anil Jadhav', contactPhone: '9765432109', contactEmail: null, city: 'Satara', state: 'Maharashtra', region: 'West', currentMonthSales: 115000, ytdSales: 920000, targetAmount: 1200000, creditLimit: 300000, outstandingPayment: 45000 },
-    { id: 5, code: 'DLRA-MH-002', name: 'Vishwakarma Power Tools', type: 'DEALER', tier: 'BRONZE', status: 'ACTIVE', contactName: 'Vijay Shinde', contactPhone: '9654321098', contactEmail: null, city: 'Sangli', state: 'Maharashtra', region: 'West', currentMonthSales: 47500, ytdSales: 380000, targetAmount: 600000, creditLimit: 300000, outstandingPayment: 22000 },
-    { id: 6, code: 'DLRA-MH-003', name: 'Om Sai Hardware Store', type: 'DEALER', tier: 'BRONZE', status: 'ACTIVE', contactName: 'Santosh More', contactPhone: '9543210987', contactEmail: null, city: 'Solapur', state: 'Maharashtra', region: 'West', currentMonthSales: 51250, ytdSales: 410000, targetAmount: 600000, creditLimit: 300000, outstandingPayment: 18000 },
-    { id: 7, code: 'DLRA-KA-001', name: 'Siddharth Industrial Corp', type: 'DEALER', tier: 'SILVER', status: 'ACTIVE', contactName: 'Ravi Kumar', contactPhone: '9432109876', contactEmail: 'ravi@sidindustrials.in', city: 'Hubli', state: 'Karnataka', region: 'South', currentMonthSales: 97500, ytdSales: 780000, targetAmount: 1000000, creditLimit: 300000, outstandingPayment: 38000 },
-    { id: 8, code: 'DLRA-GOA-001', name: 'Konkan Power Equipment', type: 'DEALER', tier: 'BRONZE', status: 'ACTIVE', contactName: 'Deepak Naik', contactPhone: '9321098765', contactEmail: null, city: 'Panaji', state: 'Goa', region: 'West', currentMonthSales: 36250, ytdSales: 290000, targetAmount: 500000, creditLimit: 300000, outstandingPayment: 12000 },
+    { id: 1, crn: 'KPT-CP-2026-00001', code: 'DIST-MH-001', name: 'Shree Ganesh Industrial Tools', type: 'DISTRIBUTOR', tier: 'GOLD', status: 'ACTIVE', contactName: 'Suresh Patil', contactPhone: '9823456789', contactEmail: 'suresh@sgtools.in', city: 'Pune', state: 'Maharashtra', region: 'West', currentMonthSales: 356250, ytdSales: 2850000, targetAmount: 3600000, creditLimit: 1000000, outstandingPayment: 145000 },
+    { id: 2, crn: 'KPT-CP-2026-00002', code: 'DIST-MH-002', name: 'Mahalaxmi Hardware & Tools', type: 'DISTRIBUTOR', tier: 'SILVER', status: 'ACTIVE', contactName: 'Ramesh Desai', contactPhone: '9812345678', contactEmail: 'ramesh@mahalaxmi.com', city: 'Kolhapur', state: 'Maharashtra', region: 'West', currentMonthSales: 206250, ytdSales: 1650000, targetAmount: 2400000, creditLimit: 1000000, outstandingPayment: 89000 },
+    { id: 3, crn: 'KPT-CP-2026-00003', code: 'DIST-KA-001', name: 'Kaveri Tools & Equipment', type: 'DISTRIBUTOR', tier: 'GOLD', status: 'ACTIVE', contactName: 'Kiran Hegde', contactPhone: '9876543210', contactEmail: 'kiran@kaveritools.in', city: 'Belgaum', state: 'Karnataka', region: 'South', currentMonthSales: 275000, ytdSales: 2200000, targetAmount: 2800000, creditLimit: 1000000, outstandingPayment: 112000 },
+    { id: 4, crn: 'KPT-CP-2026-00004', code: 'DLRA-MH-001', name: 'Aarav Engineering Supplies', type: 'DEALER', tier: 'SILVER', status: 'ACTIVE', contactName: 'Anil Jadhav', contactPhone: '9765432109', contactEmail: null, city: 'Satara', state: 'Maharashtra', region: 'West', currentMonthSales: 115000, ytdSales: 920000, targetAmount: 1200000, creditLimit: 300000, outstandingPayment: 45000 },
+    { id: 5, crn: 'KPT-CP-2026-00005', code: 'DLRA-MH-002', name: 'Vishwakarma Power Tools', type: 'DEALER', tier: 'BRONZE', status: 'ACTIVE', contactName: 'Vijay Shinde', contactPhone: '9654321098', contactEmail: null, city: 'Sangli', state: 'Maharashtra', region: 'West', currentMonthSales: 47500, ytdSales: 380000, targetAmount: 600000, creditLimit: 300000, outstandingPayment: 22000 },
+    { id: 6, crn: 'KPT-CP-2026-00006', code: 'DLRA-MH-003', name: 'Om Sai Hardware Store', type: 'DEALER', tier: 'BRONZE', status: 'ACTIVE', contactName: 'Santosh More', contactPhone: '9543210987', contactEmail: null, city: 'Solapur', state: 'Maharashtra', region: 'West', currentMonthSales: 51250, ytdSales: 410000, targetAmount: 600000, creditLimit: 300000, outstandingPayment: 18000 },
+    { id: 7, crn: 'KPT-CP-2026-00007', code: 'DLRA-KA-001', name: 'Siddharth Industrial Corp', type: 'DEALER', tier: 'SILVER', status: 'ACTIVE', contactName: 'Ravi Kumar', contactPhone: '9432109876', contactEmail: 'ravi@sidindustrials.in', city: 'Hubli', state: 'Karnataka', region: 'South', currentMonthSales: 97500, ytdSales: 780000, targetAmount: 1000000, creditLimit: 300000, outstandingPayment: 38000 },
+    { id: 8, crn: 'KPT-CP-2026-00008', code: 'DLRA-GOA-001', name: 'Konkan Power Equipment', type: 'DEALER', tier: 'BRONZE', status: 'ACTIVE', contactName: 'Deepak Naik', contactPhone: '9321098765', contactEmail: null, city: 'Panaji', state: 'Goa', region: 'West', currentMonthSales: 36250, ytdSales: 290000, targetAmount: 500000, creditLimit: 300000, outstandingPayment: 12000 },
   ],
   pagination: { page: 1, limit: 100, total: 8, totalPages: 1 },
 };
@@ -28,14 +28,14 @@ const STATIC_INCENTIVE_SLABS = {
 };
 
 const STATIC_PARTNER_INCENTIVES = [
-  { id: 1, partnerId: 1, period: '2026-07', salesAmount: 356250, incentivePercent: 5.0, incentiveAmount: 17813, status: 'UNDER_REVIEW', remarks: null },
-  { id: 2, partnerId: 1, period: '2026-06', salesAmount: 342000, incentivePercent: 5.0, incentiveAmount: 17100, status: 'APPROVED', remarks: null },
-  { id: 3, partnerId: 1, period: '2026-05', salesAmount: 318000, incentivePercent: 5.0, incentiveAmount: 15900, status: 'PAID', remarks: 'Payment processed via NEFT' },
-  { id: 4, partnerId: 2, period: '2026-07', salesAmount: 206250, incentivePercent: 3.5, incentiveAmount: 7219, status: 'PENDING', remarks: null },
-  { id: 5, partnerId: 2, period: '2026-06', salesAmount: 198000, incentivePercent: 3.5, incentiveAmount: 6930, status: 'APPROVED', remarks: null },
-  { id: 6, partnerId: 3, period: '2026-07', salesAmount: 275000, incentivePercent: 5.0, incentiveAmount: 13750, status: 'UNDER_REVIEW', remarks: null },
-  { id: 7, partnerId: 4, period: '2026-07', salesAmount: 115000, incentivePercent: 3.5, incentiveAmount: 4025, status: 'PENDING', remarks: null },
-  { id: 8, partnerId: 5, period: '2026-07', salesAmount: 47500, incentivePercent: 2.0, incentiveAmount: 950, status: 'PENDING', remarks: null },
+  { id: 1, partnerId: 1, period: '2026-07', salesAmount: 356250, incentivePercent: 5.0, incentiveAmount: 17813, adjustment: 0, netReward: 17813, status: 'UNDER_REVIEW', remarks: null, approvedAt: null, paidAt: null, partner: { id: 1, name: 'Shree Ganesh Industrial Tools', city: 'Pune', tier: 'GOLD' } },
+  { id: 2, partnerId: 1, period: '2026-06', salesAmount: 342000, incentivePercent: 5.0, incentiveAmount: 17100, adjustment: 0, netReward: 17100, status: 'APPROVED', remarks: null, approvedAt: null, paidAt: null, partner: { id: 1, name: 'Shree Ganesh Industrial Tools', city: 'Pune', tier: 'GOLD' } },
+  { id: 3, partnerId: 1, period: '2026-05', salesAmount: 318000, incentivePercent: 5.0, incentiveAmount: 15900, adjustment: 0, netReward: 15900, status: 'PAID', remarks: 'Payment processed via NEFT', approvedAt: null, paidAt: null, partner: { id: 1, name: 'Shree Ganesh Industrial Tools', city: 'Pune', tier: 'GOLD' } },
+  { id: 4, partnerId: 2, period: '2026-07', salesAmount: 206250, incentivePercent: 3.5, incentiveAmount: 7219, adjustment: 0, netReward: 7219, status: 'PENDING', remarks: null, approvedAt: null, paidAt: null, partner: { id: 2, name: 'Mahalaxmi Hardware & Tools', city: 'Kolhapur', tier: 'SILVER' } },
+  { id: 5, partnerId: 2, period: '2026-06', salesAmount: 198000, incentivePercent: 3.5, incentiveAmount: 6930, adjustment: 0, netReward: 6930, status: 'APPROVED', remarks: null, approvedAt: null, paidAt: null, partner: { id: 2, name: 'Mahalaxmi Hardware & Tools', city: 'Kolhapur', tier: 'SILVER' } },
+  { id: 6, partnerId: 3, period: '2026-07', salesAmount: 275000, incentivePercent: 5.0, incentiveAmount: 13750, adjustment: 0, netReward: 13750, status: 'UNDER_REVIEW', remarks: null, approvedAt: null, paidAt: null, partner: { id: 3, name: 'Kaveri Tools & Equipment', city: 'Belgaum', tier: 'GOLD' } },
+  { id: 7, partnerId: 4, period: '2026-07', salesAmount: 115000, incentivePercent: 3.5, incentiveAmount: 4025, adjustment: 0, netReward: 4025, status: 'PENDING', remarks: null, approvedAt: null, paidAt: null, partner: { id: 4, name: 'Aarav Engineering Supplies', city: 'Satara', tier: 'SILVER' } },
+  { id: 8, partnerId: 5, period: '2026-07', salesAmount: 47500, incentivePercent: 2.0, incentiveAmount: 950, adjustment: 0, netReward: 950, status: 'PENDING', remarks: null, approvedAt: null, paidAt: null, partner: { id: 5, name: 'Vishwakarma Power Tools', city: 'Sangli', tier: 'BRONZE' } },
 ];
 
 const STATIC_STOCK_ALERTS = {
@@ -137,6 +137,7 @@ export const kptKeys = {
     list: (params?: any) => [...kptKeys.partners.all, 'list', params || {}] as const,
     detail: (id: number) => [...kptKeys.partners.all, 'detail', id] as const,
     incentives: (id: number) => [...kptKeys.partners.all, 'incentives', id] as const,
+    eligibleApplications: () => [...kptKeys.partners.all, 'eligible-applications'] as const,
   },
   stock: {
     all: ['kpt-stock'] as const,
@@ -148,12 +149,17 @@ export const kptKeys = {
     all: ['kpt-incentive-slabs'] as const,
     list: (params?: any) => [...kptKeys.incentiveSlabs.all, 'list', params || {}] as const,
   },
+  incentives: {
+    all: ['kpt-incentives'] as const,
+    list: (params?: any) => [...kptKeys.incentives.all, 'list', params || {}] as const,
+  },
   performance: {
     all: ['kpt-performance'] as const,
     revenue: () => [...kptKeys.performance.all, 'revenue'] as const,
     rankings: () => [...kptKeys.performance.all, 'rankings'] as const,
     trends: () => [...kptKeys.performance.all, 'trends'] as const,
     kpis: () => [...kptKeys.performance.all, 'kpis'] as const,
+    revenueAnalysis: (params?: Record<string, unknown>) => [...kptKeys.performance.all, 'revenue-analysis', params ?? {}] as const,
   },
   inventory: {
     all: ['kpt-inventory'] as const,
@@ -231,6 +237,8 @@ export function useDeletePartner() {
     mutationFn: (id: number) => kptPartnerService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: kptKeys.partners.all });
+      queryClient.invalidateQueries({ queryKey: kptKeys.performance.all });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'overview'] });
     },
   });
 }
@@ -252,6 +260,9 @@ export function useCreateIncentive(partnerId: number) {
         const arr = old?.data ?? old ?? [];
         return { data: [newInc, ...arr] };
       });
+      queryClient.invalidateQueries({ queryKey: kptKeys.incentives.all });
+      queryClient.invalidateQueries({ queryKey: kptKeys.performance.all });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'overview'] });
     },
   });
 }
@@ -261,10 +272,40 @@ export function useUpdateIncentive() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) =>
       tryApi(() => kptPartnerService.updateIncentive(id, data), { id, ...data }),
-    onSuccess: (updated: any) => {
-      // Invalidate all incentive queries so the status refresh appears
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: kptKeys.partners.all });
+      queryClient.invalidateQueries({ queryKey: kptKeys.incentives.all });
+      queryClient.invalidateQueries({ queryKey: kptKeys.performance.all });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'overview'] });
+    },
+  });
+}
+
+export function useEligibleApplications() {
+  return useQuery({
+    queryKey: kptKeys.partners.eligibleApplications(),
+    queryFn: () => kptPartnerService.getEligibleApplications(),
+  });
+}
+
+export function useActivatePartner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ crn, data }: { crn: string; data: { type: string; tier?: string; region?: string; targetAmount?: number; code?: string } }) =>
+      kptPartnerService.activateFromApplication(crn, data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: kptKeys.partners.all });
     },
+  });
+}
+
+export function useAllIncentives(params?: { period?: string; partnerId?: number; status?: string; city?: string }) {
+  return useQuery({
+    queryKey: kptKeys.incentives.list(params),
+    queryFn: () => withFallback(
+      () => kptPartnerService.getAllIncentives(params),
+      { data: STATIC_PARTNER_INCENTIVES }
+    ),
   });
 }
 
@@ -322,6 +363,7 @@ export function useCreateStock() {
         if (!old?.data) return old;
         return { ...old, data: [newEntry, ...old.data] };
       });
+      queryClient.invalidateQueries({ queryKey: kptKeys.performance.kpis() });
     },
   });
 }
@@ -343,6 +385,7 @@ export function useUpdateStock() {
         if (!old?.data) return old;
         return { ...old, data: old.data.map((s: any) => s.id === updated.id ? { ...s, ...updated } : s) };
       });
+      queryClient.invalidateQueries({ queryKey: kptKeys.performance.kpis() });
     },
   });
 }
@@ -357,6 +400,7 @@ export function useDeleteStock() {
         if (!old?.data) return old;
         return { ...old, data: old.data.filter((s: any) => s.id !== id) };
       });
+      queryClient.invalidateQueries({ queryKey: kptKeys.performance.kpis() });
     },
   });
 }
@@ -419,6 +463,47 @@ export function useDeleteIncentiveSlab() {
 // ============================================
 // Performance hooks
 // ============================================
+
+const STATIC_REVENUE_ANALYSIS = {
+  data: {
+    kpis: {
+      revenue: 0,
+      previousRevenue: 0,
+      growthPct: null as number | null,
+      invoicedAmount: 0,
+      outstandingReceivables: 0,
+      avgRevenuePerActivePartner: 0,
+      activePartnersWithOrders: 0,
+      activePartnerCount: 0,
+      periodLabel: 'Year to Date',
+    },
+    trend: [] as Array<{ period: string; revenue: number; prevRevenue: number }>,
+    partners: { data: [] as any[], total: 0, page: 1, pageSize: 10, totalPages: 0 },
+    products: { data: [] as any[], total: 0, page: 1, pageSize: 10, totalPages: 0 },
+    categories: [] as any[],
+    alerts: [] as Array<{ type: string; severity: string; message: string }>,
+  },
+};
+
+export function useRevenueAnalysis(params?: {
+  period?: string;
+  startDate?: string;
+  endDate?: string;
+  partnerId?: number;
+  partnerType?: string;
+  region?: string;
+  partnerPage?: number;
+  productPage?: number;
+}) {
+  return useQuery({
+    queryKey: kptKeys.performance.revenueAnalysis(params as Record<string, unknown>),
+    queryFn: () => withFallback(
+      () => kptPerformanceService.getRevenueAnalysis(params),
+      STATIC_REVENUE_ANALYSIS
+    ),
+  });
+}
+
 export function useRevenueSummary() {
   return useQuery({
     queryKey: kptKeys.performance.revenue(),

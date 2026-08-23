@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import {
   Card,
@@ -25,14 +25,14 @@ import {
 import { Users, MapPin, TrendingUp, Phone, Mail, Plus, Pencil, Upload, Download } from "lucide-react";
 import {
   usePartners,
-  useCreatePartner,
   useUpdatePartner,
+  useActivatePartner,
+  useEligibleApplications,
   useBulkImportPartners,
 } from "../../hooks/useKpt";
 import { useCurrency } from "../../contexts/CurrencyContext";
-import { GstinInput } from "../gstin-input";
-import type { GstDetails } from "../../lib/api/types";
-import { COUNTRIES, getStates, getCities } from "../../lib/location-data";
+import { TaxRegistrationInput } from "./TaxRegistrationInput";
+import { getDefaultTaxType } from "../../lib/kpt/tax-types";
 
 interface ChannelPartner {
   id: number;
@@ -47,6 +47,7 @@ interface ChannelPartner {
   city: string;
   state: string;
   region: string;
+  crn?: string | null;
   currentMonthSales: number;
   ytdSales: number;
   targetAmount: number;
@@ -62,7 +63,7 @@ const TIER_LABEL: Record<string, string> = {
 };
 
 const TIER_STYLE: Record<string, string> = {
-  BRONZE: "bg-orange-100 text-orange-700 border-orange-200",
+  BRONZE: "bg-blue-100 text-blue-700 border-blue-200",
   SILVER: "bg-gray-100 text-gray-600 border-gray-200",
   GOLD: "bg-amber-100 text-amber-700 border-amber-200",
   PLATINUM: "bg-violet-100 text-violet-700 border-violet-200",
@@ -92,13 +93,21 @@ interface PartnerFormState {
   type: string;
   tier: string;
   contactName: string;
+  countryCode: string;
   contactPhone: string;
   contactEmail: string;
-  country: string;
-  state: string;
+  countryIso: string;
+  pincode: string;
+  locationDisplay: string;
   city: string;
+  state: string;
+  country: string;
+  region: string;
+  geoLat: string;
+  geoLng: string;
+  taxType: string;
+  taxNumber: string;
   targetAmount: string;
-  gstin: string;
 }
 
 const EMPTY_FORM: PartnerFormState = {
@@ -107,71 +116,312 @@ const EMPTY_FORM: PartnerFormState = {
   type: "DEALER",
   tier: "BRONZE",
   contactName: "",
+  countryCode: "+91",
   contactPhone: "",
   contactEmail: "",
-  country: "India",
-  state: "",
+  countryIso: "IN",
+  pincode: "",
+  locationDisplay: "",
   city: "",
+  state: "",
+  country: "",
+  region: "",
+  geoLat: "",
+  geoLng: "",
+  taxType: "GSTIN",
+  taxNumber: "",
   targetAmount: "",
-  gstin: "",
 };
+
+const COUNTRY_CODES = [
+  { code: "+91",  flag: "🇮🇳", name: "India" },
+  { code: "+1",   flag: "🇺🇸", name: "USA / Canada" },
+  { code: "+44",  flag: "🇬🇧", name: "UK" },
+  { code: "+61",  flag: "🇦🇺", name: "Australia" },
+  { code: "+971", flag: "🇦🇪", name: "UAE" },
+  { code: "+966", flag: "🇸🇦", name: "Saudi Arabia" },
+  { code: "+65",  flag: "🇸🇬", name: "Singapore" },
+  { code: "+60",  flag: "🇲🇾", name: "Malaysia" },
+  { code: "+49",  flag: "🇩🇪", name: "Germany" },
+  { code: "+33",  flag: "🇫🇷", name: "France" },
+  { code: "+81",  flag: "🇯🇵", name: "Japan" },
+  { code: "+86",  flag: "🇨🇳", name: "China" },
+  { code: "+27",  flag: "🇿🇦", name: "South Africa" },
+  { code: "+55",  flag: "🇧🇷", name: "Brazil" },
+  { code: "+92",  flag: "🇵🇰", name: "Pakistan" },
+  { code: "+880", flag: "🇧🇩", name: "Bangladesh" },
+  { code: "+94",  flag: "🇱🇰", name: "Sri Lanka" },
+  { code: "+977", flag: "🇳🇵", name: "Nepal" },
+];
+
+const LOCATION_COUNTRIES = [
+  { iso: "IN", flag: "🇮🇳", name: "India" },
+  { iso: "US", flag: "🇺🇸", name: "United States" },
+  { iso: "GB", flag: "🇬🇧", name: "United Kingdom" },
+  { iso: "AU", flag: "🇦🇺", name: "Australia" },
+  { iso: "AE", flag: "🇦🇪", name: "UAE" },
+  { iso: "SA", flag: "🇸🇦", name: "Saudi Arabia" },
+  { iso: "SG", flag: "🇸🇬", name: "Singapore" },
+  { iso: "MY", flag: "🇲🇾", name: "Malaysia" },
+  { iso: "DE", flag: "🇩🇪", name: "Germany" },
+  { iso: "FR", flag: "🇫🇷", name: "France" },
+  { iso: "JP", flag: "🇯🇵", name: "Japan" },
+  { iso: "CN", flag: "🇨🇳", name: "China" },
+  { iso: "ZA", flag: "🇿🇦", name: "South Africa" },
+  { iso: "BR", flag: "🇧🇷", name: "Brazil" },
+  { iso: "PK", flag: "🇵🇰", name: "Pakistan" },
+  { iso: "BD", flag: "🇧🇩", name: "Bangladesh" },
+  { iso: "LK", flag: "🇱🇰", name: "Sri Lanka" },
+  { iso: "NP", flag: "🇳🇵", name: "Nepal" },
+];
+
+type FormErrors = Partial<Record<keyof PartnerFormState, string>>;
+
+function validateEmail(email: string): string {
+  if (!email) return "";
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ? ""
+    : "Enter a valid email address";
+}
+
+function validatePhone(phone: string): string {
+  if (!phone) return "Phone number is required";
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 7 || digits.length > 15)
+    return "Enter a valid phone number (7–15 digits)";
+  return "";
+}
+
+interface EligibleApplication {
+  crn: string;
+  firmName: string;
+  ownerName: string;
+  mobile: string;
+  email: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  currentStage: number;
+  status: string;
+}
 
 function PartnerFormDialog({
   trigger,
   title,
   initial,
+  mode,
   onSubmit,
   isPending,
 }: {
   trigger: React.ReactNode;
   title: string;
   initial?: PartnerFormState;
-  onSubmit: (data: PartnerFormState) => void;
+  mode?: "add" | "edit";
+  onSubmit: (data: PartnerFormState, crn?: string) => void;
   isPending?: boolean;
 }) {
+  const isAddMode = mode !== "edit";
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<PartnerFormState>(initial ?? EMPTY_FORM);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
+  const [selectedCrn, setSelectedCrn] = useState<string>("");
+  const [appData, setAppData] = useState<EligibleApplication | null>(null);
+  const userEditedLocation = useRef(false);
   const { symbol } = useCurrency();
 
-  const availableStates = getStates(form.country);
-  const availableCities = getCities(form.country, form.state);
+  const { data: eligibleAppsData } = useEligibleApplications();
+  const eligibleApps: EligibleApplication[] = eligibleAppsData?.data ?? [];
 
   function set(field: keyof PartnerFormState, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+    setForm((f) => {
+      const next = { ...f, [field]: value };
+      if (field === "countryIso") {
+        next.taxType = getDefaultTaxType(value);
+        next.taxNumber = "";
+      }
+      return next;
+    });
+    if (formErrors[field]) {
+      setFormErrors((e) => { const n = { ...e }; delete n[field]; return n; });
+    }
+    if (field === "locationDisplay") userEditedLocation.current = true;
+    if (field === "pincode" || field === "countryIso") userEditedLocation.current = false;
   }
 
-  function setCountry(value: string) {
-    setForm((f) => ({ ...f, country: value, state: "", city: "" }));
+  function handleCrnSelect(crn: string) {
+    setSelectedCrn(crn);
+    if (!crn) {
+      setAppData(null);
+      setForm(EMPTY_FORM);
+      return;
+    }
+    const app = eligibleApps.find((a) => a.crn === crn);
+    if (!app) return;
+    setAppData(app);
+    setForm((f) => ({
+      ...f,
+      name: app.firmName,
+      contactName: app.ownerName,
+      contactPhone: app.mobile,
+      contactEmail: app.email ?? "",
+      pincode: app.pincode ?? "",
+      city: app.city ?? "",
+      state: app.state ?? "",
+      country: "India",
+      countryIso: "IN",
+      countryCode: "+91",
+      locationDisplay: [app.city, app.state, "India"].filter(Boolean).join(", "),
+    }));
   }
 
-  function setState(value: string) {
-    setForm((f) => ({ ...f, state: value, city: "" }));
-  }
+  useEffect(() => {
+    if (open) {
+      setForm(initial ?? EMPTY_FORM);
+      setFormErrors({});
+      userEditedLocation.current = false;
+      setLookupError("");
+      if (isAddMode) {
+        setSelectedCrn("");
+        setAppData(null);
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!form.pincode || form.pincode.length < 3) {
+      setLookupError("");
+      return;
+    }
+    const t = setTimeout(async () => {
+      if (userEditedLocation.current) return;
+      setLookupLoading(true);
+      setLookupError("");
+      try {
+        const resp = await fetch(`https://api.zippopotam.us/${form.countryIso.toLowerCase()}/${form.pincode}`);
+        if (!resp.ok) {
+          setLookupError("Postal code not found");
+          return;
+        }
+        const json = await resp.json();
+        const place = json.places?.[0];
+        if (!place) {
+          setLookupError("No location data");
+          return;
+        }
+        setForm((f) => ({
+          ...f,
+          city: place["place name"] ?? "",
+          state: place["state"] ?? "",
+          country: json["country"] ?? "",
+          geoLat: place["latitude"] ?? "",
+          geoLng: place["longitude"] ?? "",
+          ...(!userEditedLocation.current && {
+            locationDisplay: [place["place name"], place["state"], json["country abbreviation"]]
+              .filter(Boolean).join(", "),
+          }),
+        }));
+      } catch {
+        setLookupError("Lookup failed");
+      } finally {
+        setLookupLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [form.pincode, form.countryIso]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSubmit(form);
+    if (isAddMode && !selectedCrn) {
+      setFormErrors((f) => ({ ...f, name: "Select a partner application first" }));
+      return;
+    }
+    const errors: FormErrors = {};
+    const phoneErr = validatePhone(form.contactPhone);
+    if (phoneErr) errors.contactPhone = phoneErr;
+    const emailErr = validateEmail(form.contactEmail);
+    if (emailErr) errors.contactEmail = emailErr;
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    onSubmit(form, isAddMode ? selectedCrn : undefined);
     setOpen(false);
   }
+
+  const readOnly = isAddMode && !!appData;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="overflow-y-auto flex-1 space-y-4 py-2 pr-1">
+
+          {/* CRN selector — only in add mode */}
+          {isAddMode && (
             <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => set("name", e.target.value)} required />
+              <Label>Partner Application (CRN) <span className="text-red-500">*</span></Label>
+              <Select value={selectedCrn} onValueChange={handleCrnSelect}>
+                <SelectTrigger className={!selectedCrn ? "border-amber-400 text-muted-foreground" : ""}>
+                  <SelectValue placeholder="Select an approved application…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {eligibleApps.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No eligible applications found</div>
+                  )}
+                  {eligibleApps.map((app) => (
+                    <SelectItem key={app.crn} value={app.crn}>
+                      <span className="font-mono text-xs text-muted-foreground mr-2">{app.crn}</span>
+                      {app.firmName}
+                      {app.city ? ` — ${app.city}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!selectedCrn && (
+                <p className="text-xs text-muted-foreground">
+                  Only applications at stage 4+ not yet activated are shown.
+                </p>
+              )}
             </div>
-            <div className="space-y-1.5">
-              <Label>Code</Label>
-              <Input value={form.code} onChange={(e) => set("code", e.target.value)} />
+          )}
+
+          {/* Read-only application info when CRN selected in add mode */}
+          {isAddMode && appData && (
+            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs w-20 shrink-0">Firm</span>
+                <span className="font-medium">{appData.firmName}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs w-20 shrink-0">Owner</span>
+                <span>{appData.ownerName}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs w-20 shrink-0">Mobile</span>
+                <span>{appData.mobile}</span>
+              </div>
+              {appData.email && (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs w-20 shrink-0">Email</span>
+                  <span>{appData.email}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs w-20 shrink-0">Location</span>
+                <span>{[appData.city, appData.state].filter(Boolean).join(", ") || "—"}</span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Main form fields — hidden in add mode until CRN is chosen */}
+          {(!isAddMode || selectedCrn) && (
+            <>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Type</Label>
@@ -197,6 +447,17 @@ function PartnerFormDialog({
               </Select>
             </div>
           </div>
+          {!readOnly && (
+            <>
+          <div className="space-y-1.5">
+            <Label>Name</Label>
+            <Input value={form.name} onChange={(e) => set("name", e.target.value)} required />
+            {formErrors.name && <p className="text-xs text-red-500">{formErrors.name}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Code</Label>
+            <Input value={form.code} onChange={(e) => set("code", e.target.value)} />
+          </div>
           <div className="space-y-1.5">
             <Label>Contact Name</Label>
             <Input value={form.contactName} onChange={(e) => set("contactName", e.target.value)} />
@@ -204,85 +465,130 @@ function PartnerFormDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Phone</Label>
-              <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} />
+              <div className="flex">
+                <Select value={form.countryCode} onValueChange={(v) => set("countryCode", v)}>
+                  <SelectTrigger className="w-[86px] shrink-0 rounded-r-none border-r-0 focus:ring-0 gap-1">
+                    <span className="flex items-center gap-1 text-sm leading-none">
+                      <span>{COUNTRY_CODES.find(c => c.code === form.countryCode)?.flag ?? "🌐"}</span>
+                      <span>{form.countryCode}</span>
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent className="min-w-[220px]">
+                    {COUNTRY_CODES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.flag} {c.code} — {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={form.contactPhone}
+                  onChange={(e) => set("contactPhone", e.target.value)}
+                  onBlur={() => { const err = validatePhone(form.contactPhone); setFormErrors((f) => ({ ...f, contactPhone: err || undefined })); }}
+                  className={`rounded-l-none ${formErrors.contactPhone ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                  placeholder="Phone number"
+                />
+              </div>
+              {formErrors.contactPhone && <p className="text-xs text-red-500">{formErrors.contactPhone}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input type="email" value={form.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} />
+              <Input
+                type="text"
+                value={form.contactEmail}
+                onChange={(e) => set("contactEmail", e.target.value)}
+                onBlur={() => { const err = validateEmail(form.contactEmail); setFormErrors((f) => ({ ...f, contactEmail: err || undefined })); }}
+                className={formErrors.contactEmail ? "border-red-500 focus-visible:ring-red-500" : ""}
+                placeholder="email@example.com"
+              />
+              {formErrors.contactEmail && <p className="text-xs text-red-500">{formErrors.contactEmail}</p>}
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Country</Label>
-            <Select value={form.country} onValueChange={setCountry}>
-              <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-              <SelectContent>
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>State</Label>
-              {availableStates.length > 0 ? (
-                <Select value={form.state} onValueChange={setState}>
-                  <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
-                  <SelectContent>
-                    {availableStates.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input value={form.state} onChange={(e) => set("state", e.target.value)} placeholder="State / Province" />
-              )}
+            <Label>Location</Label>
+            <div className="grid grid-cols-[120px_1fr] gap-2">
+              <Select value={form.countryIso} onValueChange={(v) => set("countryIso", v)}>
+                <SelectTrigger className="gap-1">
+                  <span className="flex items-center gap-1 text-sm leading-none">
+                    <span>{LOCATION_COUNTRIES.find(c => c.iso === form.countryIso)?.flag ?? "🌐"}</span>
+                    <span>{form.countryIso}</span>
+                  </span>
+                </SelectTrigger>
+                <SelectContent className="min-w-[200px]">
+                  {LOCATION_COUNTRIES.map((c) => (
+                    <SelectItem key={c.iso} value={c.iso}>
+                      {c.flag} {c.iso} — {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="relative">
+                <Input
+                  value={form.pincode}
+                  onChange={(e) => set("pincode", e.target.value)}
+                  placeholder="Postal / PIN code"
+                />
+                {lookupLoading && (
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground animate-pulse">
+                    …
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>City</Label>
-              {availableCities.length > 0 ? (
-                <Select value={form.city} onValueChange={(v) => set("city", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
-                  <SelectContent>
-                    {availableCities.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="City" />
-              )}
-            </div>
+            <Input
+              value={form.locationDisplay}
+              onChange={(e) => set("locationDisplay", e.target.value)}
+              placeholder="City, State, Country (auto-filled from postal code)"
+              className="text-sm"
+            />
+            {lookupError && <p className="text-xs text-red-500">{lookupError}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>GSTIN</Label>
-            <GstinInput
-              value={form.gstin}
-              onChange={(v) => set("gstin", v)}
-              onVerified={(d: GstDetails) => {
-                setForm((f) => ({
-                  ...f,
-                  name: f.name || d.legalName,
-                  country: "India",
-                  state: f.state || d.state || "",
-                  city: f.city || d.city || "",
-                }));
+            <Label>Tax Registration</Label>
+            <TaxRegistrationInput
+              countryIso={form.countryIso}
+              taxType={form.taxType}
+              taxNumber={form.taxNumber}
+              onTaxTypeChange={(v) => set("taxType", v)}
+              onTaxNumberChange={(v) => set("taxNumber", v)}
+              onVerified={(result) => {
+                if (result.legalName) {
+                  setForm((f) => ({ ...f, name: f.name || result.legalName! }));
+                }
               }}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>Target Amount ({symbol})</Label>
-            <Input
-              type="number"
-              value={form.targetAmount}
-              onChange={(e) => set("targetAmount", e.target.value)}
-              placeholder="e.g. 3000000"
-            />
+            </>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Region</Label>
+              <Input value={form.region} onChange={(e) => set("region", e.target.value)} placeholder="e.g. West, South" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Target Amount ({symbol})</Label>
+              <Input
+                type="number"
+                value={form.targetAmount}
+                onChange={(e) => set("targetAmount", e.target.value)}
+                placeholder="e.g. 3000000"
+              />
+            </div>
           </div>
-          <DialogFooter>
+          {readOnly && (
+            <div className="space-y-1.5">
+              <Label>Partner Code (optional)</Label>
+              <Input value={form.code} onChange={(e) => set("code", e.target.value)} placeholder="Auto-generated if left blank" />
+            </div>
+          )}
+            </>
+          )}
+
+          </div>{/* end scrollable body */}
+          <DialogFooter className="shrink-0 border-t pt-4 pb-1 bg-background">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving..." : "Save"}
+            <Button type="submit" disabled={isPending || (isAddMode && !selectedCrn)}>
+              {isPending ? "Saving..." : isAddMode ? "Activate Partner" : "Save"}
             </Button>
           </DialogFooter>
         </form>
@@ -440,7 +746,7 @@ function ImportPartnersDialog() {
 
 export function ChannelPartnersPage() {
   const { data, isLoading } = usePartners({ limit: 100 });
-  const createPartner = useCreatePartner();
+  const activatePartner = useActivatePartner();
   const updatePartner = useUpdatePartner();
   const { symbol, currency, convert } = useCurrency();
   const fmt = (n: number) => currency === 'INR'
@@ -475,12 +781,17 @@ export function ChannelPartnersPage() {
         )
       : 0;
 
-  function handleCreate(form: PartnerFormState) {
-    createPartner.mutate({
-      ...form,
-      targetAmount: Number(form.targetAmount) || 0,
-      gstin: form.gstin || undefined,
-      country: form.country || "India",
+  function handleCreate(form: PartnerFormState, crn?: string) {
+    if (!crn) return;
+    activatePartner.mutate({
+      crn,
+      data: {
+        type: form.type,
+        tier: form.tier || undefined,
+        region: form.region || undefined,
+        targetAmount: Number(form.targetAmount) || 0,
+        code: form.code || undefined,
+      },
     });
   }
 
@@ -490,8 +801,9 @@ export function ChannelPartnersPage() {
       data: {
         ...form,
         targetAmount: Number(form.targetAmount) || 0,
-        gstin: form.gstin || undefined,
-        country: form.country || "India",
+        geoLat: form.geoLat ? Number(form.geoLat) : undefined,
+        geoLng: form.geoLng ? Number(form.geoLng) : undefined,
+        gstin: form.taxType === "GSTIN" ? form.taxNumber || undefined : undefined,
       },
     });
   }
@@ -507,13 +819,14 @@ export function ChannelPartnersPage() {
           <ImportPartnersDialog />
           <PartnerFormDialog
           title="Add Channel Partner"
+          mode="add"
           trigger={
             <Button className="flex items-center gap-2">
               <Plus className="h-4 w-4" /> Add Partner
             </Button>
           }
           onSubmit={handleCreate}
-          isPending={createPartner.isPending}
+          isPending={activatePartner.isPending}
         />
         </div>
       </div>
@@ -550,7 +863,7 @@ export function ChannelPartnersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  {["Partner", "Type", "City / State", "MTD Sales", "YTD Sales", "Target", "Achievement", "Tier", "Status", ""].map(
+                  {["Partner", "CRN", "Type", "Pincode", "MTD Sales", "YTD Sales", "Target", "Achievement", "Tier", "Status", ""].map(
                     (h) => (
                       <th
                         key={h}
@@ -577,19 +890,31 @@ export function ChannelPartnersPage() {
                       ? "text-amber-600"
                       : "text-red-500";
 
+                  const pa = p as any;
+                  const inferredIso = LOCATION_COUNTRIES.find(
+                    (c) => c.name.toLowerCase() === (pa.country ?? "").toLowerCase()
+                  )?.iso ?? "IN";
                   const editInitial: PartnerFormState = {
                     name: p.name,
                     code: p.code,
                     type: p.type,
                     tier: p.tier,
                     contactName: p.contactName,
+                    countryCode: pa.countryCode ?? "+91",
                     contactPhone: p.contactPhone,
                     contactEmail: p.contactEmail,
-                    country: (p as any).country ?? "India",
-                    state: p.state,
-                    city: p.city,
+                    countryIso: inferredIso,
+                    pincode: pa.pincode ?? "",
+                    locationDisplay: [pa.city, pa.state, pa.country].filter(Boolean).join(", "),
+                    city: pa.city ?? "",
+                    state: pa.state ?? "",
+                    country: pa.country ?? "",
+                    region: pa.region ?? "",
+                    geoLat: pa.geoLat != null ? String(pa.geoLat) : "",
+                    geoLng: pa.geoLng != null ? String(pa.geoLng) : "",
+                    taxType: pa.taxType ?? (pa.gstin ? "GSTIN" : getDefaultTaxType(inferredIso)),
+                    taxNumber: pa.taxNumber ?? pa.gstin ?? "",
                     targetAmount: String(p.targetAmount),
-                    gstin: (p as any).gstin ?? "",
                   };
 
                   return (
@@ -611,13 +936,16 @@ export function ChannelPartnersPage() {
                           )}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
+                        {p.crn || "—"}
+                      </td>
                       <td className="px-4 py-3">
                         <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
                           {TYPE_LABEL[p.type] ?? p.type}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {[p.city, p.state].filter(Boolean).join(", ")}
+                        {(p as any).pincode || "—"}
                       </td>
                       <td className="px-4 py-3 font-semibold text-foreground">
                         {fmt(p.currentMonthSales)}
@@ -656,6 +984,7 @@ export function ChannelPartnersPage() {
                       <td className="px-4 py-3">
                         <PartnerFormDialog
                           title="Edit Partner"
+                          mode="edit"
                           trigger={
                             <Button variant="ghost" size="sm" className="h-7 px-2">
                               <Pencil className="h-3.5 w-3.5" />
@@ -671,7 +1000,7 @@ export function ChannelPartnersPage() {
                 })}
                 {partners.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-6 py-8 text-center text-muted-foreground text-sm">
+                    <td colSpan={11} className="px-6 py-8 text-center text-muted-foreground text-sm">
                       No partners found.
                     </td>
                   </tr>

@@ -2,7 +2,7 @@ import { MainLayout } from "@/components/main-layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RoleGuard } from "@/components/guards/RoleGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { IncentiveProgramsPage } from "@/components/kpt/incentive-programs";
+import { IncentivesPage } from "@/components/kpt/IncentivesPage";
 
 export default function Page() {
   return (
@@ -10,7 +10,7 @@ export default function Page() {
       <MainLayout>
         <RoleGuard allowedRoles={['ADMIN', 'SYSTEM_ADMIN', 'SALES']} redirectTo="/">
           <ErrorBoundary>
-            <IncentiveProgramsPage />
+            <IncentivesPage />
           </ErrorBoundary>
         </RoleGuard>
       </MainLayout>

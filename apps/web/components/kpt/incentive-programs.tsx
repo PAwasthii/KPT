@@ -52,9 +52,9 @@ const TIER_CONFIG: Record<
   { color: string; badge: string; borderColor: string }
 > = {
   BRONZE: {
-    color: "border-orange-200 bg-orange-50",
-    badge: "bg-orange-100 text-orange-700",
-    borderColor: "border-orange-200",
+    color: "border-blue-200 bg-blue-50",
+    badge: "bg-blue-100 text-blue-700",
+    borderColor: "border-blue-200",
   },
   SILVER: {
     color: "border-gray-300 bg-gray-50",

@@ -18,11 +18,7 @@ export default function AdminPage() {
 
   // Hooks
   const { data: usersResponse, isLoading: usersLoading } = useUsers();
-  // Extract users array from paginated response and filter out innovunglobal.com users
-  const users = (usersResponse?.data || []).filter((user) => {
-    const emailDomain = user.email?.split('@')[1]?.toLowerCase();
-    return emailDomain !== 'innovunglobal.com';
-  });
+  const users = usersResponse?.data || [];
   const updatePermissionsMutation = useUpdateUserPermissions();
   const webhookTestMutation = useWebhookTest();
   const { data: health, isLoading: healthLoading } = useHealth();

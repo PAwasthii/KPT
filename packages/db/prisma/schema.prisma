@@ -19,6 +19,8 @@ model User {
   deletedAt              DateTime?             @map("deleted_at")
   deletedBy              Int?                  @map("deleted_by")
   countryCode            String?               @default("91") @map("country_code")
+  authProvider           AuthProvider          @default(PASSWORD) @map("auth_provider")
+  lastLoginAt            DateTime?             @map("last_login_at")
   firstName              String?               @map("first_name")
   lastName               String?               @map("last_name")
   location               String?
@@ -54,6 +56,9 @@ model User {
   approvalRequestsBy        ApprovalProcess[]     @relation("ApprovalCreatedBy")
   approvalActionsAs         ApprovalProcess[]     @relation("ApprovalLastActor")
   notifications             Notification[]
+  createdFinanceInvoices    FinanceInvoice[]  @relation("FinanceInvoiceCreator")
+  createdFinanceBudgets     FinanceBudget[]   @relation("FinanceBudgetCreator")
+  updatedFinanceBudgets     FinanceBudget[]   @relation("FinanceBudgetUpdater")
 
   @@index([region])
   @@map("users")
@@ -137,6 +142,20 @@ model PasswordReset {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_resets")
+}
+
+model LoginOtp {
+  id        Int       @id @default(autoincrement())
+  email     String
+  otpHash   String    @map("otp_hash")
+  expiresAt DateTime  @map("expires_at")
+  attempts  Int       @default(0)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("login_otps")
 }
 
 model Lead {
@@ -690,6 +709,9 @@ model Product {
   opportunityLineItems  OpportunityLineItem[]
   quoteLineItems        QuoteLineItem[]
   salesOrderLineItems   SalesOrderLineItem[]
+  financeInvoiceItems   FinanceInvoiceItem[]
+  // Stock Inventory back-relation (canonical link)
+  inventoryItem InventoryItem?  @relation("InventoryProduct")
 
   @@index([categoryId])
   @@index([active])
@@ -787,7 +809,8 @@ model ProductCategory {
   description String?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  products    Product[]
+  products        Product[]
+  financeBudgets  FinanceBudget[]
 
   @@map("product_categories")
 }
@@ -1101,28 +1124,32 @@ model SalesOrder {
   cancellationReason  String?               @map("cancellation_reason")
 
   // Foreign keys
-  quoteId             Int                   @map("quote_id")
+  quoteId             Int?                  @map("quote_id")
   accountId           Int                   @map("account_id")
   contactId           Int?                  @map("contact_id")
   ownerId             Int                   @map("owner_id")
   approvedById        Int?                  @map("approved_by_id")
+  channelPartnerId    Int?                  @map("channel_partner_id")
 
   // Timestamps
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
 
   // Relations
-  quote               Quote                 @relation(fields: [quoteId], references: [id])
+  quote               Quote?                @relation(fields: [quoteId], references: [id])
   account             Account               @relation(fields: [accountId], references: [id])
   contact             Contact?              @relation(fields: [contactId], references: [id])
   owner               User                  @relation("SalesOrderOwner", fields: [ownerId], references: [id])
   approvedBy          User?                 @relation("SalesOrderApprovedBy", fields: [approvedById], references: [id])
+  channelPartner      ChannelPartner?       @relation(fields: [channelPartnerId], references: [id])
   lineItems           SalesOrderLineItem[]
+  financeInvoices     FinanceInvoice[]
 
   @@index([quoteId])
   @@index([accountId])
   @@index([ownerId])
   @@index([status])
+  @@index([channelPartnerId])
   @@map("sales_orders")
 }
 
@@ -1193,6 +1220,15 @@ enum UserRole {
   SYSTEM_ADMIN
   ADMIN
   SALES
+  GUEST
+  FINANCE_ADMIN
+}
+
+enum AuthProvider {
+  PASSWORD
+  EMAIL_OTP
+  GOOGLE
+  MICROSOFT
 }
 
 enum LeadStatus {
@@ -1248,6 +1284,8 @@ enum InvoiceCategory {
 enum AuditCategory {
   CAMPAIGN_MANAGEMENT
   SALES_MANAGEMENT
+  AUTH_MANAGEMENT
+  FINANCE_MANAGEMENT
 }
 
 enum SegmentEntityType {
@@ -1424,22 +1462,35 @@ model ChannelPartner {
   contactName        String        @map("contact_name")
   contactEmail       String?       @map("contact_email")
   contactPhone       String        @map("contact_phone")
-  city               String
-  state              String
-  country            String?   @default("India")
+  countryCode        String?       @default("+91") @map("country_code")
+  city               String?
+  state              String?
+  country            String?       @default("India")
+  pincode            String?
+  geoLat             Float?        @map("geo_lat")
+  geoLng             Float?        @map("geo_lng")
   region             String?
   gstin              String?
+  taxType            String?   @map("tax_type")
+  taxNumber          String?   @map("tax_number")
   creditLimit        Float         @default(0) @map("credit_limit")
   outstandingPayment Float         @default(0) @map("outstanding_payment")
   currentMonthSales  Float         @default(0) @map("current_month_sales")
   ytdSales           Float         @default(0) @map("ytd_sales")
   targetAmount       Float         @default(0) @map("target_amount")
   notes              String?
+  crn                String?       @unique @map("crn")
+  activatedAt        DateTime?     @map("activated_at")
+  activatedById      Int?          @map("activated_by_id")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
 
-  incentives   PartnerIncentive[]
-  stockEntries StockEntry[]
+  incentives      PartnerIncentive[]
+  stockEntries    StockEntry[]
+  financeInvoices FinanceInvoice[]
+  financeBudgets  FinanceBudget[]
+  salesOrders     SalesOrder[]
+  stockMovements  StockMovement[]
 
   @@index([type])
   @@index([tier])
@@ -1458,6 +1509,8 @@ model IncentiveSlab {
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
 
+  incentives       PartnerIncentive[]
+
   @@map("incentive_slabs")
 }
 
@@ -1465,10 +1518,14 @@ model PartnerIncentive {
   id               Int             @id @default(autoincrement())
   partnerId        Int             @map("partner_id")
   partner          ChannelPartner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  slabId           Int?            @map("slab_id")
+  slab             IncentiveSlab?  @relation(fields: [slabId], references: [id])
   period           String          // e.g. "2026-07" (YYYY-MM)
   salesAmount      Float           @map("sales_amount")
   incentivePercent Float           @map("incentive_percent")
   incentiveAmount  Float           @map("incentive_amount")
+  adjustment       Float           @default(0)
+  netReward        Float?          @map("net_reward")
   status           IncentiveStatus @default(PENDING)
   remarks          String?
   approvedAt       DateTime?       @map("approved_at")
@@ -1477,6 +1534,7 @@ model PartnerIncentive {
   updatedAt        DateTime        @updatedAt @map("updated_at")
 
   @@index([partnerId])
+  @@index([slabId])
   @@index([period])
   @@index([status])
   @@map("partner_incentives")
@@ -1500,6 +1558,8 @@ model StockEntry {
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
+  stockMovements  StockMovement[]
+
   @@index([partnerId])
   @@index([inventoryItemId])
   @@index([sku])
@@ -1521,11 +1581,324 @@ model InventoryItem {
   lastUpdated DateTime    @default(now()) @map("last_updated")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
+  // Canonical link to Sales Product record (one-to-one)
+  productId   Int?        @unique @map("product_id")
+  product     Product?    @relation("InventoryProduct", fields: [productId], references: [id])
 
-  stockEntries StockEntry[]
+  stockEntries   StockEntry[]
+  stockMovements StockMovement[]
 
   @@index([sku])
   @@index([category])
   @@index([stockStatus])
   @@map("inventory_items")
+}
+
+model StockMovement {
+  id              Int             @id @default(autoincrement())
+  inventoryItemId Int             @map("inventory_item_id")
+  inventoryItem   InventoryItem   @relation(fields: [inventoryItemId], references: [id])
+  stockEntryId    Int?            @map("stock_entry_id")
+  stockEntry      StockEntry?     @relation(fields: [stockEntryId], references: [id])
+  partnerId       Int?            @map("partner_id")
+  partner         ChannelPartner? @relation(fields: [partnerId], references: [id])
+  movementType    MovementType    @map("movement_type")
+  quantity        Int
+  qtyBefore       Int             @map("qty_before")
+  qtyAfter        Int             @map("qty_after")
+  reference       String?
+  notes           String?
+  createdBy       Int?            @map("created_by")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  @@index([inventoryItemId])
+  @@index([partnerId])
+  @@index([movementType])
+  @@map("stock_movements")
+}
+
+enum MovementType {
+  INITIAL
+  DISPATCH
+  RETURN
+  ADJUSTMENT
+}
+
+// ============================================
+// KPT CHANNEL PARTNER ONBOARDING MODULE
+// ============================================
+
+model KptPartner {
+  id              String   @id @default(uuid())
+  crn             String   @unique
+  authId          String?  @unique
+
+  ownerName       String   @map("owner_name")
+  firmName        String   @map("firm_name")
+  countryCode     String?  @default("+91") @map("country_code")
+  mobile          String   @unique
+  email           String   @unique
+  city            String?
+  district        String?
+  state           String?
+  pincode         String
+  shopSizeSqft    Int?     @map("shop_size_sqft")
+  existingBrands  String?  @map("existing_brands")
+  yearsInBusiness Int?     @map("years_in_business")
+  turnoverRange   String?  @map("turnover_range")
+  productInterest String[] @map("product_interest")
+
+  currentStage    Int      @default(1) @map("current_stage")
+  status          String   @default("enquiry_received")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  fieldReport     KptFieldVerification?
+  documents       KptDocument[]
+  approvalLogs    KptApprovalLog[]
+  agreement       KptAgreement?
+  statusHistory   KptStatusHistory[]
+
+  @@index([currentStage])
+  @@index([status])
+  @@index([createdAt])
+  @@map("kpt_partners")
+}
+
+model KptFieldVerification {
+  id               String    @id @default(uuid())
+  crn              String    @unique
+  assignedExecId   String?   @map("assigned_exec_id")
+  assignedExecName String?   @map("assigned_exec_name")
+  shopDimensions   String?   @map("shop_dimensions")
+  locationScore    String?   @map("location_score")
+  roadVisibility   String?   @map("road_visibility")
+  existingLines    String?   @map("existing_lines")
+  marketPotential  String?   @map("market_potential")
+  nearestDealer    String?   @map("nearest_dealer")
+  geoLat           Float?    @map("geo_lat")
+  geoLng           Float?    @map("geo_lng")
+  shopPhotoPath    String?   @map("shop_photo_path")
+  execNotes        String?   @map("exec_notes")
+  scheduledDate    DateTime? @map("scheduled_date")
+  scheduleNote     String?   @map("schedule_note")
+  visitedAt        DateTime? @map("visited_at")
+  verifiedAt       DateTime? @map("verified_at")
+
+  partner KptPartner @relation(fields: [crn], references: [crn], onDelete: Cascade)
+
+  @@map("kpt_field_verifications")
+}
+
+model KptDocument {
+  id            String   @id @default(uuid())
+  crn           String
+  stage         Int
+  docType       String   @map("doc_type")
+  fileName      String?  @map("file_name")
+  storagePath   String?  @map("storage_path")
+  verifyStatus  String   @default("pending") @map("verify_status")
+  verifyApi     String?  @map("verify_api")
+  verifyPayload Json?    @map("verify_payload")
+  failReason    String?  @map("fail_reason")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+  verifiedAt    DateTime? @map("verified_at")
+
+  partner KptPartner @relation(fields: [crn], references: [crn], onDelete: Cascade)
+
+  @@index([crn])
+  @@index([stage])
+  @@index([verifyStatus])
+  @@map("kpt_documents")
+}
+
+model KptApprovalLog {
+  id          String   @id @default(uuid())
+  crn         String
+  action      String
+  doneBy      String   @map("done_by")
+  doneByName  String?  @map("done_by_name")
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  partner KptPartner @relation(fields: [crn], references: [crn], onDelete: Cascade)
+
+  @@index([crn])
+  @@map("kpt_approval_logs")
+}
+
+model KptAgreement {
+  id            String    @id @default(uuid())
+  crn           String    @unique
+  agreementPath String?   @map("agreement_path")
+  esignRef      String?   @map("esign_ref")
+  signStatus    String    @default("pending") @map("sign_status")
+  signedAt      DateTime? @map("signed_at")
+  activatedAt   DateTime? @map("activated_at")
+
+  partner KptPartner @relation(fields: [crn], references: [crn], onDelete: Cascade)
+
+  @@map("kpt_agreements")
+}
+
+model KptStatusHistory {
+  id         String   @id @default(uuid())
+  crn        String
+  fromStatus String   @map("from_status")
+  toStatus   String   @map("to_status")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  partner KptPartner @relation(fields: [crn], references: [crn], onDelete: Cascade)
+
+  @@index([crn])
+  @@map("kpt_status_history")
+}
+
+model KptAdmin {
+  id     String  @id @default(uuid())
+  authId String  @unique @map("auth_id")
+  name   String
+  role   String
+  mobile String?
+  active Boolean @default(true)
+
+  @@map("kpt_admins")
+}
+
+model KptOtp {
+  id        String   @id @default(uuid())
+  mobile    String
+  otpHash   String   @map("otp_hash")
+  crn       String?
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([mobile])
+  @@map("kpt_otps")
+}
+
+// ============================================
+// FINANCE MANAGEMENT MODULE
+// ============================================
+
+enum FinanceInvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum FinanceBudgetType {
+  REVENUE
+  SALES
+  INCENTIVE
+}
+
+enum FinanceBudgetDimension {
+  TOTAL
+  REGION
+  PARTNER
+  PRODUCT_CATEGORY
+  SKU
+}
+
+model FinanceInvoice {
+  id             Int                  @id @default(autoincrement())
+  invoiceNumber  String               @unique @map("invoice_number")
+  invoiceDate    DateTime             @default(now()) @map("invoice_date")
+  dueDate        DateTime?            @map("due_date")
+  status         FinanceInvoiceStatus @default(DRAFT)
+  partnerId      Int?                 @map("partner_id")
+  partner        ChannelPartner?      @relation(fields: [partnerId], references: [id])
+  salesOrderId   Int?                 @map("sales_order_id")
+  salesOrder     SalesOrder?          @relation(fields: [salesOrderId], references: [id])
+  billingName    String?              @map("billing_name")
+  billingAddress String?              @map("billing_address")
+  gstin          String?
+  region         String?
+  subtotal       Decimal              @default(0) @db.Decimal(15, 2)
+  taxAmount      Decimal              @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  taxPercent     Decimal              @default(18) @map("tax_percent") @db.Decimal(5, 2)
+  discountAmount Decimal              @default(0) @map("discount_amount") @db.Decimal(15, 2)
+  totalAmount    Decimal              @default(0) @map("total_amount") @db.Decimal(15, 2)
+  paidAmount     Decimal              @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  paymentDate    DateTime?            @map("payment_date")
+  paymentMethod  String?              @map("payment_method")
+  notes          String?
+  createdBy      Int                  @map("created_by")
+  createdByUser  User                 @relation("FinanceInvoiceCreator", fields: [createdBy], references: [id])
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  items          FinanceInvoiceItem[]
+
+  @@index([status])
+  @@index([partnerId])
+  @@index([invoiceDate])
+  @@map("finance_invoices")
+}
+
+model FinanceInvoiceItem {
+  id          Int            @id @default(autoincrement())
+  invoiceId   Int            @map("invoice_id")
+  invoice     FinanceInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   Int?           @map("product_id")
+  product     Product?       @relation(fields: [productId], references: [id])
+  sku         String?
+  description String
+  quantity    Decimal        @default(1) @db.Decimal(10, 2)
+  unitPrice   Decimal        @default(0) @map("unit_price") @db.Decimal(15, 2)
+  discount    Decimal        @default(0) @db.Decimal(15, 2)
+  taxAmount   Decimal        @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  lineTotal   Decimal        @default(0) @map("line_total") @db.Decimal(15, 2)
+  sortOrder   Int            @default(0) @map("sort_order")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  @@index([invoiceId])
+  @@map("finance_invoice_items")
+}
+
+model FinanceBudget {
+  id                Int                    @id @default(autoincrement())
+  year              Int
+  month             Int?
+  budgetType        FinanceBudgetType      @map("budget_type")
+  dimensionType     FinanceBudgetDimension @default(TOTAL) @map("dimension_type")
+  dimensionValue    String?                @map("dimension_value")
+  partnerId         Int?                   @map("partner_id")
+  partner           ChannelPartner?        @relation(fields: [partnerId], references: [id])
+  productCategoryId Int?                   @map("product_category_id")
+  productCategory   ProductCategory?       @relation(fields: [productCategoryId], references: [id])
+  budgetAmount      Decimal                @default(0) @map("budget_amount") @db.Decimal(15, 2)
+  notes             String?
+  createdBy         Int                    @map("created_by")
+  createdByUser     User                   @relation("FinanceBudgetCreator", fields: [createdBy], references: [id])
+  updatedBy         Int?                   @map("updated_by")
+  updatedByUser     User?                  @relation("FinanceBudgetUpdater", fields: [updatedBy], references: [id])
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  @@index([year, month])
+  @@index([budgetType])
+  @@map("finance_budgets")
+}
+
+model FinanceIntegrationLog {
+  id           Int      @id @default(autoincrement())
+  provider     String   @default("MANUAL")
+  action       String
+  status       String
+  recordsIn    Int?     @map("records_in")
+  recordsOut   Int?     @map("records_out")
+  errorMessage String?  @map("error_message")
+  metadata     Json?
+  initiatedBy  Int?     @map("initiated_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("finance_integration_logs")
 }

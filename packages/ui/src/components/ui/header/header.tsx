@@ -14,6 +14,8 @@ export interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
   onManageNotifications?: () => void
   onChangePassword?: () => void
   onLogout?: () => void
+  onToggleTheme?: () => void
+  isDark?: boolean
   tabs?: React.ReactNode
 }
 
@@ -28,6 +30,8 @@ export function Header({
   onManageNotifications,
   onChangePassword,
   onLogout,
+  onToggleTheme,
+  isDark,
   tabs,
   ...props
 }: HeaderProps) {
@@ -64,14 +68,15 @@ export function Header({
               user={user}
               onChangePassword={onChangePassword}
               onLogout={onLogout}
+              onToggleTheme={onToggleTheme}
+              isDark={isDark}
             />
           )}
         </div>
       </div>
-      {/* KPT brand accent line — navy → blue → orange */}
       <div
         className="h-[2px] w-full"
-        style={{ background: "linear-gradient(90deg, #0D1B45 0%, #1A4FA3 45%, #E8651A 100%)" }}
+        style={{ background: "linear-gradient(90deg, #2563EB 0%, #60A5FA 60%, #93C5FD 100%)" }}
       />
     </header>
   )

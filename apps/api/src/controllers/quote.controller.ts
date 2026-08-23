@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
-import { Prisma, QuoteStatus, UserRole } from '@prisma/client';
+import { Prisma, QuoteStatus, UserRole, MovementType, StockStatus } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import {
   handleError,
@@ -11,6 +11,12 @@ import {
 import { buildFullName } from '../utils/nameHelpers.js';
 import { uploadToS3 } from '../services/s3.service.js';
 import { emailService } from '../services/email.service.js';
+
+function computeStockStatus(totalQty: number, minStockQty: number): StockStatus {
+  if (totalQty <= 0) return StockStatus.CRITICAL;
+  if (totalQty < minStockQty) return StockStatus.LOW;
+  return StockStatus.HEALTHY;
+}
 
 export class QuoteController {
   private parseId(id: string | undefined, res: Response, label: string, operation: string): number | null {
@@ -51,6 +57,11 @@ export class QuoteController {
 
       // Build where clause for filtering
       const whereClause: any = {};
+
+      // SALES users only see quotes for their own opportunities
+      if (req.user!.role === UserRole.SALES) {
+        whereClause.opportunity = { ownerId: req.user!.id };
+      }
 
       if (status) {
         const statusArray = status.toString().split(',');
@@ -367,10 +378,18 @@ export class QuoteController {
       const quoteId = this.parseId(req.params.id, res, 'Quote ID', operation);
       if (quoteId === null) return;
 
-      // Fetch quote with line items
+      // Fetch quote with line items and linked inventory items for stock deduction
       const quote = await prisma.quote.findUnique({
         where: { id: quoteId },
-        include: { lineItems: true },
+        include: {
+          lineItems: {
+            include: {
+              product: {
+                include: { inventoryItem: true },
+              },
+            },
+          },
+        },
       });
 
       if (!quote) {
@@ -476,6 +495,37 @@ export class QuoteController {
             },
           },
         });
+
+        // Deduct stock from linked InventoryItems
+        for (const item of quote.lineItems) {
+          const inventoryItem = item.product?.inventoryItem;
+          if (!inventoryItem) continue;
+
+          const deductQty = Math.round(Number(item.quantity));
+          if (deductQty <= 0) continue;
+
+          const qtyBefore = inventoryItem.totalQty;
+          const qtyAfter = qtyBefore - deductQty;
+          const newStatus = computeStockStatus(qtyAfter, inventoryItem.minStockQty);
+
+          await tx.inventoryItem.update({
+            where: { id: inventoryItem.id },
+            data: { totalQty: qtyAfter, stockStatus: newStatus },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              inventoryItemId: inventoryItem.id,
+              movementType: MovementType.DISPATCH,
+              quantity: deductQty,
+              qtyBefore,
+              qtyAfter,
+              reference: orderNumber,
+              notes: `Dispatched for order ${orderNumber}`,
+              createdBy: req.user!.id,
+            },
+          });
+        }
 
         return newOrder;
       });

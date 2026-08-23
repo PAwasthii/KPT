@@ -44,7 +44,7 @@ const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string
 
 const PARTNER_TYPE_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   DISTRIBUTOR: { label: "Distributor", color: "bg-blue-100 text-blue-700", icon: Truck },
-  DEALER:      { label: "Dealer",      color: "bg-orange-100 text-orange-700", icon: Store },
+  DEALER:      { label: "Dealer",      color: "bg-blue-100 text-blue-700", icon: Store },
   RETAILER:    { label: "Retailer",    color: "bg-purple-100 text-purple-700", icon: Store },
 };
 

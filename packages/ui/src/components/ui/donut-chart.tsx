@@ -45,9 +45,8 @@ export function DonutChart({
   showLegend = true,
   legendPosition = 'bottom'
 }: DonutChartProps) {
-  // Chart.js built-in legend is disabled; we render a custom legend that follows
-  // the Synkro brand guideline (2.5 Proportions): square swatch + bold percentage
-  // + label.
+  // Chart.js built-in legend is disabled; we render a custom legend:
+  // square swatch + bold percentage + label.
   const options = {
     responsive: true,
     maintainAspectRatio: false,

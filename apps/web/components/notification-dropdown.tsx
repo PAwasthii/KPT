@@ -96,7 +96,7 @@ function NotificationModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+            className="px-5 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:opacity-90 transition-opacity"
           >
             OK
           </button>
@@ -132,7 +132,7 @@ function NotificationItem({
         <p className="text-xs text-gray-400 mt-1">{timeAgo(notification.createdAt)}</p>
       </div>
       {!notification.isRead && (
-        <span className="flex-shrink-0 mt-1.5 h-2 w-2 rounded-full bg-brand-teal" />
+        <span className="flex-shrink-0 mt-1.5 h-2 w-2 rounded-full bg-primary" />
       )}
     </button>
   )
@@ -193,7 +193,7 @@ export function NotificationDropdown() {
               <span className="font-semibold text-sm text-gray-800">
                 Notifications
                 {unreadCount > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center h-5 px-1.5 rounded-full bg-brand-pale-aqua text-brand-teal text-xs font-bold">
+                  <span className="ml-2 inline-flex items-center justify-center h-5 px-1.5 rounded-full bg-blue-50 text-primary text-xs font-bold">
                     {unreadCount}
                   </span>
                 )}
@@ -203,7 +203,7 @@ export function NotificationDropdown() {
                   type="button"
                   onClick={() => markAllRead.mutate()}
                   disabled={markAllRead.isPending}
-                  className="flex items-center gap-1 text-xs text-brand-teal hover:text-brand-indigo font-medium disabled:opacity-50"
+                  className="flex items-center gap-1 text-xs text-primary hover:text-blue-700 font-medium disabled:opacity-50"
                 >
                   {markAllRead.isPending ? (
                     <Loader2 className="h-3 w-3 animate-spin" />

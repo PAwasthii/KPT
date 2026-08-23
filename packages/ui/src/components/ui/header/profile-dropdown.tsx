@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { User, Bell, LogOut, Circle } from "lucide-react"
+import { User, Bell, LogOut, Circle, Sun, Moon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "../avatar"
 import {
   DropdownMenu,
@@ -28,6 +28,8 @@ export interface ProfileDropdownProps {
   onManageNotifications?: () => void
   onChangePassword?: () => void
   onLogout?: () => void
+  onToggleTheme?: () => void
+  isDark?: boolean
   className?: string
 }
 
@@ -37,6 +39,8 @@ export function ProfileDropdown({
   onManageNotifications,
   onChangePassword,
   onLogout,
+  onToggleTheme,
+  isDark,
   className,
 }: ProfileDropdownProps) {
   const initials = user.name
@@ -54,7 +58,7 @@ export function ProfileDropdown({
             <AvatarFallback className="bg-primary text-primary-foreground font-semibold">{initials}</AvatarFallback>
           </Avatar>
           {user.isOnline && (
-            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-brand-mint border-2 border-background" />
+            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
           )}
         </Button>
       </DropdownMenuTrigger>
@@ -83,6 +87,29 @@ export function ProfileDropdown({
             <p className="text-xs text-muted-foreground mt-2">{user.email}</p>
           </div>
         </DropdownMenuLabel>
+        {onToggleTheme && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onToggleTheme}
+              className="cursor-pointer flex items-center justify-between"
+            >
+              <span className="flex items-center gap-2">
+                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {isDark ? "Light mode" : "Dark mode"}
+              </span>
+              <span className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+                isDark ? "bg-primary" : "bg-muted-foreground/30"
+              )}>
+                <span className={cn(
+                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
+                  isDark ? "translate-x-4" : "translate-x-0"
+                )} />
+              </span>
+            </DropdownMenuItem>
+          </>
+        )}
         {(onEditProfile || onManageNotifications) && <DropdownMenuSeparator />}
         {onEditProfile && (
           <DropdownMenuItem onClick={onEditProfile} className="cursor-pointer">

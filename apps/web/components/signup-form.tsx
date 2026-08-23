@@ -100,9 +100,9 @@ export function SignupForm({
                   className=""
                 />
               </div>
-              <span className="sr-only">{process.env.NEXT_PUBLIC_COMPANY_NAME || "Innovun Global"}</span>
+              <span className="sr-only">{process.env.NEXT_PUBLIC_COMPANY_NAME || "KPT"}</span>
             </a>
-            <h1 className="text-xl font-bold">Welcome to {process.env.NEXT_PUBLIC_COMPANY_NAME || "Innovun Global"} CRM.</h1>
+            <h1 className="text-xl font-bold">Welcome to {process.env.NEXT_PUBLIC_COMPANY_NAME || "KPT"} CRM.</h1>
             <FieldDescription>
               Already have an account? <a href="/login">Sign in</a>
             </FieldDescription>

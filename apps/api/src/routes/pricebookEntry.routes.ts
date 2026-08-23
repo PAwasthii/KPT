@@ -6,14 +6,16 @@ import { UserRole } from '@prisma/client';
 const router = Router();
 const pricebookEntryController = new PriceBookEntryController();
 
-router.use(requireAuth);
-router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN]));
+const viewRoles = [UserRole.SYSTEM_ADMIN, UserRole.ADMIN, UserRole.SALES];
+const manageRoles = [UserRole.SYSTEM_ADMIN, UserRole.ADMIN];
 
-router.get('/', pricebookEntryController.getAllPriceBookEntries.bind(pricebookEntryController));
-router.get('/:id', pricebookEntryController.getPriceBookEntryById.bind(pricebookEntryController));
-router.post('/', pricebookEntryController.createPriceBookEntry.bind(pricebookEntryController));
-router.put('/:id', pricebookEntryController.updatePriceBookEntry.bind(pricebookEntryController));
-router.delete('/:id', pricebookEntryController.deletePriceBookEntry.bind(pricebookEntryController));
-router.get('/pricebook/:priceBookId', pricebookEntryController.getPriceBookEntries.bind(pricebookEntryController));
+router.use(requireAuth);
+
+router.get('/', requireRole(viewRoles), pricebookEntryController.getAllPriceBookEntries.bind(pricebookEntryController));
+router.get('/:id', requireRole(viewRoles), pricebookEntryController.getPriceBookEntryById.bind(pricebookEntryController));
+router.get('/pricebook/:priceBookId', requireRole(viewRoles), pricebookEntryController.getPriceBookEntries.bind(pricebookEntryController));
+router.post('/', requireRole(manageRoles), pricebookEntryController.createPriceBookEntry.bind(pricebookEntryController));
+router.put('/:id', requireRole(manageRoles), pricebookEntryController.updatePriceBookEntry.bind(pricebookEntryController));
+router.delete('/:id', requireRole(manageRoles), pricebookEntryController.deletePriceBookEntry.bind(pricebookEntryController));
 
 export default router;

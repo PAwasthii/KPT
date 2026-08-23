@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '@repo/db';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, UserRole } from '@prisma/client';
 import { handleError, handleNotFoundError, handleValidationError } from '../utils/errorHandler.js';
 
 export class NotificationController {
@@ -89,4 +89,20 @@ export async function createNotification(params: {
   link?: string;
 }) {
   return prisma.notification.create({ data: params });
+}
+
+/** Push a notification to all ADMIN and SYSTEM_ADMIN users. */
+export async function notifyAdmins(params: {
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+}) {
+  const admins = await prisma.user.findMany({
+    where: { role: { in: [UserRole.ADMIN, UserRole.SYSTEM_ADMIN] }, deletedAt: null },
+    select: { id: true },
+  });
+  await Promise.all(
+    admins.map((a) => prisma.notification.create({ data: { userId: a.id, ...params } }).catch(() => {}))
+  );
 }

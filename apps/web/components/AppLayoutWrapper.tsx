@@ -26,7 +26,8 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
 
   // Pages that should not show sidebar and header
   const authPages = ['/login', '/signup', '/forgot-password', '/subdealer', '/developer-login', '/integration-manager', '/reset-password', '/aakraman', '/aakraman/book-a-order', '/aakraman/customer-details'];
-  const isAuthPage = authPages.includes(pathname);
+  const publicPrefixes = ['/partner/', '/kpt-admin'];
+  const isAuthPage = authPages.includes(pathname) || publicPrefixes.some(p => pathname.startsWith(p));
 
   useEffect(() => {
     if (!isAuthenticated || !isDeveloper) {

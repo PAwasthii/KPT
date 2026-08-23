@@ -5,7 +5,7 @@ import { generateToken, generateResetToken, verifyResetToken } from '../utils/jw
 import crypto from 'crypto';
 import { emailService } from '../services/email.service.js';
 import { recordAuditLog } from '../utils/audit.utils.js';
-import { UserRole } from '@prisma/client';
+import { UserRole, AuthProvider, AuditCategory } from '@prisma/client';
 import {
   handleError,
   handleValidationError,
@@ -18,6 +18,7 @@ import {
 import { isValidEmail, isValidPhone, isValidName } from '../utils/validators.js';
 import { parsePhoneNumber } from '../utils/phoneHelper.js';
 import { generateUserPassword } from '../utils/password.utils.js';
+import { createNotification } from './notification.controller.js';
 
 const developerEmailConfigured = process.env.DEVELOPER_LOGIN_EMAIL?.trim();
 const developerEmailNormalized = developerEmailConfigured ? developerEmailConfigured.toLowerCase() : undefined;
@@ -325,11 +326,8 @@ export class AuthController {
         },
       });
 
-      const masked = email.replace(/(^.).*(@.*$)/, (_m, a, b) => `${a}***${b}`);
       const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-      const subject = 'Your password reset code';
-      const body = `Hi ${userName},\n\nYour password reset code is: ${otp}\nThis code expires in 10 minutes. If you did not request this, you can ignore this email.\n\nRequested for: ${masked}`;
-      await emailService.sendEmail({ to: email, subject, body, name: userName });
+      await emailService.sendPasswordResetOtpEmail(email, userName, otp);
 
       return res.json({ success: true });
     } catch (error) {
@@ -415,6 +413,13 @@ export class AuthController {
         prisma.passwordReset.updateMany({ where: { userId: decoded.userId, usedAt: null }, data: { usedAt: new Date() } }),
       ]);
 
+      createNotification({
+        userId: decoded.userId,
+        type: 'PASSWORD_RESET',
+        title: 'Password Reset Successfully',
+        message: 'Your password was reset successfully. If this wasn\'t you, contact support immediately.',
+      }).catch(() => {});
+
       return res.json({ success: true });
     } catch (error) {
       handleError(error, res, 'Reset password');
@@ -445,15 +450,166 @@ export class AuthController {
 
       const ok = await bcrypt.compare(currentPassword, user.passwordHash);
       if (!ok) {
+        createNotification({
+          userId: user.id,
+          type: 'PASSWORD_CHANGE_FAILED',
+          title: 'Password Change Failed',
+          message: `An unsuccessful password change attempt was made on your account (${user.email}). If this wasn't you, contact support.`,
+        }).catch(() => {});
         return handleUnauthorizedError(res, 'Current password is incorrect', 'Change password');
       }
 
       const hash = await bcrypt.hash(newPassword, 10);
       await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hash } });
 
+      createNotification({
+        userId: user.id,
+        type: 'PASSWORD_CHANGED',
+        title: 'Password Changed Successfully',
+        message: `Your password for ${user.email} was changed successfully. If this wasn't you, contact support immediately.`,
+      }).catch(() => {});
+
       return res.json({ success: true });
     } catch (error) {
       handleError(error, res, 'Change password');
+    }
+  }
+
+  /**
+   * Send login OTP to email address
+   * POST /api/auth/otp/send { email }
+   */
+  async sendOtpLogin(req: Request, res: Response) {
+    try {
+      const { email } = req.body as { email?: string };
+      if (!email) {
+        return handleValidationError(res, 'Email is required', 'email', 'OTP login');
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Invalidate any previous unused OTPs for this email
+      await prisma.loginOtp.updateMany({
+        where: { email: normalizedEmail, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      const otp = (Math.floor(100000 + Math.random() * 900000)).toString();
+      const otpHash = await bcrypt.hash(otp, 10);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await prisma.loginOtp.create({
+        data: { email: normalizedEmail, otpHash, expiresAt },
+      });
+
+      // Find user name if they exist (don't reveal whether they exist)
+      const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      const name = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || normalizedEmail : '';
+
+      const emailSent = await emailService.sendLoginOtpEmail(normalizedEmail, name, otp);
+      if (!emailSent) {
+        const fromDomain = (process.env.RESEND_FROM_EMAIL || '').split('@')[1] ?? '';
+        const hint = fromDomain
+          ? `The sending domain "${fromDomain}" may not be verified in Resend. Visit https://resend.com/domains to verify it.`
+          : 'RESEND_FROM_EMAIL is not configured.';
+        console.error(`[Auth.sendOtpLogin] Email delivery failed — ${hint}`);
+        return res.status(503).json({
+          success: false,
+          error: 'OTP could not be delivered. Email is not configured correctly — please contact your administrator.',
+        });
+      }
+
+      return res.json({ success: true });
+    } catch (error) {
+      handleError(error, res, 'Send OTP login');
+    }
+  }
+
+  /**
+   * Verify login OTP and return JWT
+   * POST /api/auth/otp/verify { email, otp }
+   */
+  async verifyOtpLogin(req: Request, res: Response) {
+    try {
+      const { email, otp } = req.body as { email?: string; otp?: string };
+      if (!email || !otp) {
+        return handleValidationError(res, 'Email and otp are required', undefined, 'Verify OTP login');
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const record = await prisma.loginOtp.findFirst({
+        where: { email: normalizedEmail, usedAt: null, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!record) {
+        return handleUnauthorizedError(res, 'Invalid or expired code', 'Verify OTP login');
+      }
+
+      if (record.attempts >= 5) {
+        return handleUnauthorizedError(res, 'Too many attempts. Request a new code.', 'Verify OTP login');
+      }
+
+      const ok = await bcrypt.compare(otp, record.otpHash);
+      if (!ok) {
+        await prisma.loginOtp.update({ where: { id: record.id }, data: { attempts: record.attempts + 1 } });
+        const remaining = 5 - (record.attempts + 1);
+        return handleUnauthorizedError(
+          res,
+          remaining > 0 ? `Invalid code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.` : 'Too many attempts. Request a new code.',
+          'Verify OTP login'
+        );
+      }
+
+      // Mark OTP used
+      await prisma.loginOtp.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+
+      // Find or create user — new emails become GUEST
+      let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      const isNewUser = !user;
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            passwordHash: '',
+            role: UserRole.GUEST,
+            authProvider: AuthProvider.EMAIL_OTP,
+            lastLoginAt: new Date(),
+          },
+        });
+      } else {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { authProvider: AuthProvider.EMAIL_OTP, lastLoginAt: new Date() },
+        });
+      }
+
+      await recordAuditLog({
+        action: isNewUser ? 'GUEST_CREATED' : 'LOGIN_SUCCESS',
+        changedBy: user.id,
+        entityType: 'USER',
+        entityId: user.id,
+        newValues: { email: normalizedEmail, method: 'EMAIL_OTP' },
+        category: AuditCategory.AUTH_MANAGEMENT,
+      });
+
+      const token = generateToken(user.id, user.email);
+      return res.json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          createdAt: user.createdAt,
+          role: user.role,
+        },
+        isDeveloper: false,
+      });
+    } catch (error) {
+      handleError(error, res, 'Verify OTP login');
     }
   }
 

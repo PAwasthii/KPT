@@ -55,6 +55,11 @@ const nextConfig = {
         hostname: 'res.cloudinary.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'kpt.co.in',
+        pathname: '/**',
+      },
     ],
   },
 

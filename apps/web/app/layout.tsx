@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { AppLayoutWrapper } from "@/components/AppLayoutWrapper";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({
@@ -41,15 +42,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="h-full overflow-hidden">
       <body className={`${inter.variable} ${plusJakartaSans.variable} ${geistMono.variable} h-full overflow-hidden`} suppressHydrationWarning>
-        <QueryProvider>
-          <AuthProvider>
-            <CurrencyProvider>
-              <AppLayoutWrapper>
-                {children}
-              </AppLayoutWrapper>
-            </CurrencyProvider>
-          </AuthProvider>
-        </QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <CurrencyProvider>
+                <AppLayoutWrapper>
+                  {children}
+                </AppLayoutWrapper>
+              </CurrencyProvider>
+            </AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
         <Toaster
           position="top-center"
           richColors={true}

@@ -22,7 +22,7 @@ const TIER_LABEL: Record<string, string> = {
 };
 
 const TIER_COLOR: Record<string, string> = {
-  BRONZE: "bg-orange-100 text-orange-700 border-orange-200",
+  BRONZE: "bg-blue-100 text-blue-700 border-blue-200",
   SILVER: "bg-gray-100 text-gray-600 border-gray-200",
   GOLD: "bg-amber-100 text-amber-700 border-amber-200",
   PLATINUM: "bg-violet-100 text-violet-700 border-violet-200",

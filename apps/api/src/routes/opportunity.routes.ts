@@ -7,7 +7,7 @@ const router = Router();
 const opportunityController = new OpportunityController();
 
 router.use(requireAuth);
-router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN]));
+router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN, UserRole.SALES]));
 
 // GET /api/opportunities - List opportunities (paginated, filterable)
 router.get('/', opportunityController.getAllOpportunities.bind(opportunityController));

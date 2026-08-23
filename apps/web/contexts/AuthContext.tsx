@@ -14,6 +14,8 @@ interface AuthContextType {
   developerLogin: (credentials: LoginRequest) => Promise<User>;
   signup: (userData: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
+  sendLoginOtp: (email: string) => Promise<void>;
+  loginWithOtp: (email: string, otp: string) => Promise<User>;
   error: string | null;
   clearError: () => void;
   isDeveloper: boolean;
@@ -73,6 +75,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     throw { message: 'Signup not available', status: 403 } as ApiError;
   };
 
+  const sendLoginOtp = async (email: string): Promise<void> => {
+    try {
+      clearError();
+      await authService.sendLoginOtp(email);
+    } catch (err: any) {
+      const message = err?.message || 'Failed to send OTP. Please try again.';
+      setError(message);
+      throw err;
+    }
+  };
+
+  const loginWithOtp = async (email: string, otp: string): Promise<User> => {
+    try {
+      setIsLoading(true);
+      clearError();
+      const response = await authService.verifyLoginOtp(email, otp);
+      Cookies.set('auth_token', response.token, { expires: 7, sameSite: 'strict' });
+      setUser(response.user);
+      setIsDeveloper(false);
+      return response.user;
+    } catch (err: any) {
+      const message = err?.message || 'Invalid or expired code';
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -108,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, developerLogin, signup, logout, error, clearError, isDeveloper }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, developerLogin, signup, logout, sendLoginOtp, loginWithOtp, error, clearError, isDeveloper }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,7 +6,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 import { useQueryStates, parseAsString } from "nuqs"
-import { RoleGuard } from "@/components/guards/RoleGuard"
+import { RoleGuard, useHasRole } from "@/components/guards/RoleGuard"
 import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui"
 import { ApprovalsTable } from "@/components/approvals/approvals-table"
 import { useAllApprovals, useMyApprovals } from "@/hooks/useApprovals"
@@ -32,16 +32,17 @@ const MY_TYPE_OPTIONS = [
 
 function ApprovalsPageContent() {
   const router = useRouter()
+  const isAdmin = useHasRole(["SYSTEM_ADMIN", "ADMIN"])
   const [queryState, setQuery] = useQueryStates(
     {
-      tab: parseAsString.withDefault("all"),
+      tab: parseAsString.withDefault(isAdmin ? "all" : "my"),
       status: parseAsString.withDefault(""),
       targetObjectName: parseAsString.withDefault(""),
       type: parseAsString.withDefault("all"),
     },
     { history: "push", shallow: false }
   )
-  const tab = queryState.tab === "my" ? "my" : "all"
+  const tab = isAdmin ? (queryState.tab === "my" ? "my" : "all") : "my"
   const status = queryState.status || ""
   const targetObjectName = queryState.targetObjectName || ""
   const type = queryState.type || "all"
@@ -166,14 +167,16 @@ function ApprovalsPageContent() {
         <p className="text-muted-foreground">Manage approval requests</p>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={isAdmin ? setTab : undefined}>
         <TabsList className="justify-start space-x-16 border-b border-gray-300">
-          <TabsTrigger
-            value="all"
-            className="text-3xl font-medium data-[state=active]:border-b-[6px] data-[state=active]:border-gray-700"
-          >
-            All Approvals
-          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger
+              value="all"
+              className="text-3xl font-medium data-[state=active]:border-b-[6px] data-[state=active]:border-gray-700"
+            >
+              All Approvals
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="my"
             className="text-3xl font-medium data-[state=active]:border-b-[6px] data-[state=active]:border-gray-700"

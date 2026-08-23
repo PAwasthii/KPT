@@ -97,6 +97,17 @@ export const authService = {
     return response.data;
   },
 
+  // Email OTP login
+  sendLoginOtp: async (email: string): Promise<{ success: boolean }> => {
+    const response = await apiClient.post("/api/auth/otp/send", { email });
+    return response.data;
+  },
+
+  verifyLoginOtp: async (email: string, otp: string): Promise<LoginResponse> => {
+    const response = await apiClient.post("/api/auth/otp/verify", { email, otp });
+    return response.data;
+  },
+
   // Forgot password (OTP)
   requestPasswordResetOtp: async (
     email: string
@@ -1907,18 +1918,45 @@ export const kptPartnerService = {
     return response.data;
   },
 
+  getAllIncentives: async (params?: { period?: string; partnerId?: number; status?: string; city?: string }) => {
+    const response = await apiClient.get('/api/kpt/channel-partners/incentives', { params });
+    return response.data;
+  },
+
   createIncentive: async (partnerId: number, data: {
     period: string;
     salesAmount: number;
     incentivePercent: number;
+    adjustment?: number;
     remarks?: string;
   }) => {
     const response = await apiClient.post(`/api/kpt/channel-partners/${partnerId}/incentives`, data);
     return response.data;
   },
 
-  updateIncentive: async (incentiveId: number, data: { status: string; remarks?: string }) => {
+  updateIncentive: async (incentiveId: number, data: { status?: string; remarks?: string; adjustment?: number; salesAmount?: number; incentivePercent?: number; incentiveAmount?: number }) => {
     const response = await apiClient.patch(`/api/kpt/channel-partners/incentives/${incentiveId}`, data);
+    return response.data;
+  },
+
+  getEligibleApplications: async () => {
+    const response = await apiClient.get('/api/kpt/channel-partners/eligible-applications');
+    return response.data;
+  },
+
+  getApplicationForActivation: async (crn: string) => {
+    const response = await apiClient.get(`/api/kpt/channel-partners/activate-info/${encodeURIComponent(crn)}`);
+    return response.data;
+  },
+
+  activateFromApplication: async (crn: string, data: {
+    type: string;
+    tier?: string;
+    region?: string;
+    targetAmount?: number;
+    code?: string;
+  }) => {
+    const response = await apiClient.post(`/api/kpt/channel-partners/activate/${encodeURIComponent(crn)}`, data);
     return response.data;
   },
 };
@@ -2028,6 +2066,20 @@ export const kptPerformanceService = {
     const response = await apiClient.get('/api/kpt/performance/kpis');
     return response.data;
   },
+
+  getRevenueAnalysis: async (params?: {
+    period?: string;
+    startDate?: string;
+    endDate?: string;
+    partnerId?: number;
+    partnerType?: string;
+    region?: string;
+    partnerPage?: number;
+    productPage?: number;
+  }) => {
+    const response = await apiClient.get('/api/kpt/performance/revenue-analysis', { params });
+    return response.data;
+  },
 };
 
 // ============================================
@@ -2080,6 +2132,90 @@ export const kptInventoryService = {
 
   delete: async (id: number) => {
     const response = await apiClient.delete(`/api/kpt/inventory/${id}`);
+    return response.data;
+  },
+};
+
+export const kptFinanceService = {
+  // Overview
+  getOverview: async () => {
+    const response = await apiClient.get('/api/kpt/finance/overview');
+    return response.data;
+  },
+
+  // Invoices
+  getInvoices: async (params?: {
+    page?: number; limit?: number; search?: string; status?: string;
+    partnerId?: number; region?: string; dateFrom?: string; dateTo?: string;
+    sortBy?: string; sortOrder?: string;
+  }) => {
+    const response = await apiClient.get('/api/kpt/finance/invoices', { params });
+    return response.data;
+  },
+  getInvoice: async (id: number) => {
+    const response = await apiClient.get(`/api/kpt/finance/invoices/${id}`);
+    return response.data;
+  },
+  createInvoice: async (data: Record<string, any>) => {
+    const response = await apiClient.post('/api/kpt/finance/invoices', data);
+    return response.data;
+  },
+  updateInvoice: async (id: number, data: Record<string, any>) => {
+    const response = await apiClient.put(`/api/kpt/finance/invoices/${id}`, data);
+    return response.data;
+  },
+
+  // SKU Analysis
+  getSkuAnalysis: async (params?: {
+    period?: string; category?: string; sku?: string; partnerId?: number; region?: string;
+  }) => {
+    const response = await apiClient.get('/api/kpt/finance/sku-analysis', { params });
+    return response.data;
+  },
+  getSkuDetail: async (sku: string) => {
+    const response = await apiClient.get(`/api/kpt/finance/sku-analysis/${encodeURIComponent(sku)}`);
+    return response.data;
+  },
+
+  // Budgets
+  getBudgets: async (params?: {
+    year?: number; month?: number; budgetType?: string; dimensionType?: string; partnerId?: number;
+  }) => {
+    const response = await apiClient.get('/api/kpt/finance/budgets', { params });
+    return response.data;
+  },
+  getBudget: async (id: number) => {
+    const response = await apiClient.get(`/api/kpt/finance/budgets/${id}`);
+    return response.data;
+  },
+  createBudget: async (data: {
+    year: number; month?: number; budgetType: string; dimensionType?: string;
+    dimensionValue?: string; partnerId?: number; productCategoryId?: number;
+    budgetAmount: number; notes?: string;
+  }) => {
+    const response = await apiClient.post('/api/kpt/finance/budgets', data);
+    return response.data;
+  },
+  updateBudget: async (id: number, data: { budgetAmount?: number; notes?: string; dimensionValue?: string }) => {
+    const response = await apiClient.put(`/api/kpt/finance/budgets/${id}`, data);
+    return response.data;
+  },
+  deleteBudget: async (id: number) => {
+    const response = await apiClient.delete(`/api/kpt/finance/budgets/${id}`);
+    return response.data;
+  },
+
+  // Integration
+  getIntegrationStatus: async () => {
+    const response = await apiClient.get('/api/kpt/finance/integration/status');
+    return response.data;
+  },
+  syncIntegration: async () => {
+    const response = await apiClient.post('/api/kpt/finance/integration/sync');
+    return response.data;
+  },
+  getIntegrationLogs: async () => {
+    const response = await apiClient.get('/api/kpt/finance/integration/logs');
     return response.data;
   },
 };

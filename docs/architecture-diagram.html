@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPT CRM — System Architecture Diagrams</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #6c8ef7;
+      --accent2: #a78bfa;
+      --accent3: #34d399;
+      --accent4: #fb923c;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --tab-active: #6c8ef7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 40px 0;
+    }
+    .header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 4px;
+    }
+    .header p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 10px 18px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text); background: var(--surface2); }
+    .tab.active {
+      color: var(--tab-active);
+      background: var(--surface);
+      border-color: var(--border);
+      border-bottom-color: var(--surface);
+    }
+    .tab-num {
+      display: inline-block;
+      background: var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.7rem;
+      margin-right: 5px;
+    }
+    .tab.active .tab-num { background: var(--accent); color: #fff; }
+
+    /* ── Content ── */
+    .content {
+      padding: 32px 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .panel-header {
+      margin-bottom: 24px;
+    }
+    .panel-header h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .panel-header p {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    /* ── Diagram Card ── */
+    .diagram-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .diagram-card h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent2);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .diagram-card .subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Grid layout ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>KPT CRM &mdash; System Architecture</h1>
+  <p>innocrm-staging &nbsp;·&nbsp; Turborepo Monorepo &nbsp;·&nbsp; Next.js 15 + Express 5 + Prisma + PostgreSQL</p>
+  <div class="tabs">
+    <div class="tab active" onclick="showTab(0)"><span class="tab-num">1</span>System Overview</div>
+    <div class="tab" onclick="showTab(1)"><span class="tab-num">2</span>Authentication</div>
+    <div class="tab" onclick="showTab(2)"><span class="tab-num">3</span>Lead Management</div>
+    <div class="tab" onclick="showTab(3)"><span class="tab-num">4</span>Sales Pipeline</div>
+    <div class="tab" onclick="showTab(4)"><span class="tab-num">5</span>WhatsApp Campaigns</div>
+    <div class="tab" onclick="showTab(5)"><span class="tab-num">6</span>KPT Onboarding</div>
+    <div class="tab" onclick="showTab(6)"><span class="tab-num">7</span>Database Schema</div>
+    <div class="tab" onclick="showTab(7)"><span class="tab-num">8</span>Request Lifecycle</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ═══════════════════════════════════════════
+       TAB 1: SYSTEM OVERVIEW
+  ════════════════════════════════════════════ -->
+  <div class="panel active" id="panel-0">
+    <div class="panel-header">
+      <h2>System Overview</h2>
+      <p>High-level view of all system components, how they connect, and external integrations.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Full System Architecture</h3>
+      <div class="subtitle">All apps, services, databases, and external APIs</div>
+      <div class="mermaid">
+graph TB
+    subgraph BROWSER["🌐 Browser"]
+        CRM["CRM App\n(Admin/Sales UI)"]
+        PARTNER_UI["Partner Portal\n(Dealer Self-Service)"]
+        KPT_ADMIN_UI["KPT Admin Panel"]
+    end
+
+    subgraph NEXTJS["📦 apps/web — Next.js 15 (port 3000)"]
+        PAGES["App Router Pages\n/leads /sales /campaigns\n/partner /kpt-admin"]
+        NEXT_API["Next.js API Routes\n/api/partner/*\n/api/admin/*\n/api/webhooks/esign"]
+        CONTEXTS["React Contexts\nAuthContext · CurrencyContext\nPartnerAuthContext"]
+    end
+
+    subgraph EXPRESS["⚡ apps/api — Express 5 (port 4000)"]
+        MIDDLEWARE["Middleware Layer\nCORS · JSON Parser\nrequireAuth · requireRole"]
+        ROUTES["40+ Route Modules\n/api/leads · /api/campaigns\n/api/opportunities · /api/quotes\n/api/kpt/* · /api/webhook"]
+        CONTROLLERS["Controllers\n38 controller files"]
+        SERVICES["Service Layer\nWhatsApp · Email · GST\nBrevo · S3 · Segment"]
+        SCHEDULER["Background Scheduler\nWhatsApp campaigns\nevery 60 seconds"]
+    end
+
+    subgraph PRISMA["🗄️ packages/db — Prisma ORM"]
+        DB_CLIENT["@repo/db\nShared Prisma Client"]
+        SCHEMA["schema.prisma\n40+ models"]
+    end
+
+    subgraph POSTGRES["🐘 PostgreSQL (Supabase)"]
+        DB[("Primary DB\nDATABASE_URL\n(pooled)")]
+        DB_DIRECT[("Migrations\nDIRECT_URL\n(direct)")]
+    end
+
+    subgraph EXTERNAL["☁️ External Services"]
+        MSG91["MSG91\nWhatsApp + OTP SMS"]
+        PLUNK["Plunk\nTransactional Email"]
+        BREVO["Brevo\nCRM Lead Sync"]
+        S3["AWS S3\nFile Storage"]
+        CLOUDINARY["Cloudinary\nImage CDN"]
+        GST_API["GST API\ngstincheck.co.in"]
+        SUPABASE_AUTH["Supabase Auth\nKPT Admin login"]
+        SUPABASE_STORAGE["Supabase Storage\nDocument uploads"]
+    end
+
+    CRM -->|"axios + JWT"| PAGES
+    PARTNER_UI --> PAGES
+    KPT_ADMIN_UI --> PAGES
+    PAGES -->|"TanStack React Query\naxios"| EXPRESS
+    PAGES --> NEXT_API
+    CONTEXTS --> PAGES
+    MIDDLEWARE --> ROUTES
+    ROUTES --> CONTROLLERS
+    CONTROLLERS --> SERVICES
+    CONTROLLERS --> DB_CLIENT
+    SERVICES --> DB_CLIENT
+    SCHEDULER -->|"every 60s"| SERVICES
+    NEXT_API --> DB_CLIENT
+    DB_CLIENT --> SCHEMA
+    SCHEMA --> DB
+    SCHEMA -.->|"migrations only"| DB_DIRECT
+    SERVICES -->|"templates + send"| MSG91
+    SERVICES -->|"OTP + notifications"| MSG91
+    SERVICES --> PLUNK
+    SERVICES --> BREVO
+    SERVICES --> S3
+    SERVICES --> CLOUDINARY
+    SERVICES --> GST_API
+    NEXT_API --> SUPABASE_AUTH
+    NEXT_API --> SUPABASE_STORAGE
+    MSG91 -->|"delivery webhooks"| ROUTES
+
+    style BROWSER fill:#1e2235,stroke:#3d4466
+    style NEXTJS fill:#1a2535,stroke:#2563eb
+    style EXPRESS fill:#1a2520,stroke:#16a34a
+    style PRISMA fill:#251e35,stroke:#7c3aed
+    style POSTGRES fill:#25201a,stroke:#d97706
+    style EXTERNAL fill:#201a25,stroke:#db2777
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Monorepo Package Structure</h3>
+      <div class="subtitle">Turborepo workspace layout and dependency graph</div>
+      <div class="mermaid">
+graph LR
+    subgraph ROOT["innocrm-staging (root)"]
+        PKG_ROOT["package.json\nturbo.json"]
+    end
+
+    subgraph APPS["apps/"]
+        API["api/\nExpress 5\nTypeScript ESM\nPort 4000"]
+        WEB["web/\nNext.js 15\nReact 19\nPort 3000"]
+    end
+
+    subgraph PACKAGES["packages/"]
+        DB["db/\n@repo/db\nPrisma Client\nSchema + Seed"]
+        UI["ui/\n@repo/ui\nRadix UI + Tailwind\nCharts + Motion"]
+        TS_CFG["typescript-config/\n@repo/typescript-config"]
+        ESL_CFG["eslint-config/\n@repo/eslint-config"]
+    end
+
+    PKG_ROOT --> APPS
+    PKG_ROOT --> PACKAGES
+    API -->|"depends on"| DB
+    API -->|"depends on"| TS_CFG
+    API -->|"depends on"| ESL_CFG
+    WEB -->|"depends on"| DB
+    WEB -->|"depends on"| UI
+    WEB -->|"depends on"| TS_CFG
+    WEB -->|"depends on"| ESL_CFG
+
+    style ROOT fill:#1a1d27,stroke:#6c8ef7
+    style APPS fill:#1a2520,stroke:#16a34a
+    style PACKAGES fill:#251e35,stroke:#7c3aed
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB 2: AUTHENTICATION
+  ════════════════════════════════════════════ -->
+  <div class="panel" id="panel-1">
+    <div class="panel-header">
+      <h2>Authentication Systems</h2>
+      <p>Three completely separate auth flows for three user types — CRM users, KPT Partners, and KPT Admins.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Auth System 1 — CRM Internal Users (ADMIN / SALES)</h3>
+      <div class="subtitle">JWT via Express API · bcrypt · role-based access control</div>
+      <div class="mermaid">
+sequenceDiagram
+    actor User as 👤 CRM User
+    participant FE as Next.js Frontend
+    participant API as Express API :4000
+    participant DB as PostgreSQL
+
+    Note over User,DB: ── Login ──
+    User->>FE: Enter email + password
+    FE->>API: POST /api/auth/login
+    API->>DB: prisma.user.findUnique({ email })
+    DB-->>API: User record
+    API->>API: bcrypt.compare(password, passwordHash)
+    API->>API: generateToken(userId, email) → JWT (24h)
+    API-->>FE: { token, user, isDeveloper: false }
+    FE->>FE: Store token in AuthContext
+
+    Note over User,DB: ── Authenticated Request ──
+    User->>FE: Navigate to /leads
+    FE->>API: GET /api/leads\nAuthorization: Bearer <token>
+    API->>API: requireAuth middleware\nverifyToken(token)
+    API->>DB: prisma.user.findUnique(userId)
+    DB-->>API: User + role
+    API->>API: Attach req.user = {id, email, role}
+    API->>DB: prisma.lead.findMany({...filters})
+    DB-->>API: Lead records
+    API-->>FE: JSON response
+    FE->>FE: React Query caches + renders
+
+    Note over User,DB: ── Password Reset (3-step OTP) ──
+    User->>FE: Forgot password
+    FE->>API: POST /api/auth/forgot-password { email }
+    API->>API: Generate 6-digit OTP
+    API->>API: bcrypt.hash(otp)
+    API->>DB: prisma.passwordReset.create(otpHash, expiresAt)
+    API->>API: emailService.sendEmail(otp) via Plunk
+    User->>FE: Enter OTP
+    FE->>API: POST /api/auth/forgot-password/verify { email, otp }
+    API->>DB: Find latest PasswordReset (not used, not expired)
+    API->>API: bcrypt.compare(otp, otpHash)
+    API->>DB: Mark usedAt = now()
+    API->>API: generateResetToken(userId, recordId) → 15min JWT
+    API-->>FE: { resetToken }
+    FE->>API: POST /api/auth/forgot-password/reset { resetToken, newPassword }
+    API->>API: verifyResetToken(resetToken)
+    API->>DB: prisma.$transaction([update password, invalidate all resets])
+    API->>API: createNotification(PASSWORD_RESET)
+    API-->>FE: { success: true }
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Auth System 2 — KPT Partners (OTP-based, cookie session)</h3>
+      <div class="subtitle">SHA-256 OTP · jose JWT · HttpOnly cookie · Next.js API routes only</div>
+      <div class="mermaid">
+sequenceDiagram
+    actor Partner as 👔 KPT Partner
+    participant FE as Partner Portal (Next.js)
+    participant NA as Next.js API Routes
+    participant DB as PostgreSQL
+    participant SMS as MSG91 SMS
+
+    Note over Partner,SMS: ── OTP Login ──
+    Partner->>FE: Enter CRN + mobile number
+    FE->>NA: POST /api/partner/auth/login\n{ crn, mobile }
+    NA->>NA: Zod validate: CRN regex KPT-CP-\d{4}-\d{5}
+    NA->>DB: prisma.kptPartner.findUnique({ crn })
+    DB-->>NA: Partner record
+    NA->>NA: Verify partner.mobile === submitted mobile
+    NA->>NA: Generate 6-digit OTP\n(123456 in dev, random in prod)
+    NA->>NA: SHA-256 hash: otp + crn → otpHash
+    NA->>DB: prisma.kptOtp.create({ mobile, crn, otpHash, expiresAt: +10min })
+    NA->>SMS: sendSMS(mobile, "Your OTP is ...")
+    NA-->>FE: { sent: true }
+
+    Partner->>FE: Enter OTP
+    FE->>NA: POST /api/partner/auth/verify-otp\n{ crn, otp }
+    NA->>DB: Find latest KptOtp (not expired, not used)
+    NA->>NA: SHA-256(otp + crn) === otpHash?
+    NA->>NA: Sign JWT with KPT_JWT_SECRET (jose)
+    NA-->>FE: Set-Cookie: kpt_partner_token (HttpOnly)\n{ crn, mobile }
+
+    Note over Partner,SMS: ── Authenticated Partner Request ──
+    Partner->>FE: Visit /partner/documents
+    FE->>NA: POST /api/partner/upload
+    NA->>NA: getPartnerFromRequest(req)\nread kpt_partner_token cookie\nverify with jose
+    NA-->>NA: session = { crn, mobile }
+    NA->>DB: Prisma operations with crn
+    NA-->>FE: Response
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Auth System 3 — KPT Admins (Supabase Auth)</h3>
+      <div class="subtitle">Supabase client-side auth · Service Role Key verification · Next.js API routes</div>
+      <div class="mermaid">
+flowchart LR
+    A["KPT Admin\nopens browser"] --> B["Supabase Auth\nclient-side login\nemail + password"]
+    B --> C["Supabase returns\naccess_token"]
+    C --> D["Next.js Admin Page\nsends request"]
+    D --> E["Next.js API Route\n/api/admin/*"]
+    E --> F["Verify token\nwith SUPABASE_SERVICE_ROLE_KEY"]
+    F -->|"valid"| G["Prisma DB query"]
+    F -->|"invalid"| H["401 Unauthorized"]
+    G --> I["Return partner data\nto admin UI"]
+
+    style A fill:#1a2535,stroke:#2563eb
+    style B fill:#251e35,stroke:#7c3aed
+    style F fill:#251a1a,stroke:#dc2626
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Role-Based Access Control Matrix</h3>
+      <div class="subtitle">What each role can access in the Express API</div>
+      <div class="mermaid">
+flowchart TD
+    REQ["Incoming Request\nAuthorization: Bearer token"] --> MW["requireAuth middleware\nverifyToken · DB lookup"]
+    MW --> ROLE{User Role?}
+
+    ROLE -->|"SYSTEM_ADMIN"| SA["Full Access\n• All leads + users\n• Audit logs\n• Settings\n• Delete operations\n• Integrations"]
+    ROLE -->|"ADMIN"| AD["Admin Access\n• Lead management\n• Campaign creation\n• User viewing\n• Quote approval\n• Reports"]
+    ROLE -->|"SALES"| SL["Limited Access\n• Assigned leads only\n• Own opportunities\n• Cannot delete\n• No admin panels"]
+    ROLE -->|"isDeveloper: true"| DEV["Developer Only\n• /api/integrations\n• /api/auth/logout\n• /api/auth/me\n• Nothing else (403)"]
+
+    SA --> DB[("PostgreSQL")]
+    AD --> DB
+    SL --> DB
+    DEV --> DB
+
+    style REQ fill:#1a2535,stroke:#2563eb
+    style SA fill:#1a2520,stroke:#16a34a
+    style AD fill:#1e2535,stroke:#2563eb
+    style SL fill:#251e35,stroke:#7c3aed
+    style DEV fill:#251a1a,stroke:#dc2626
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB 3: LEAD MANAGEMENT
+  ════════════════════════════════════════════ -->
+  <div class="panel" id="panel-2">
+    <div class="panel-header">
+      <h2>Lead Management Flow</h2>
+      <p>How leads enter the system, get scored, assigned, and eventually convert to contacts.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Lead Entry Points & Lifecycle</h3>
+      <div class="subtitle">Three ways leads enter, automatic scoring and assignment, status transitions</div>
+      <div class="mermaid">
+flowchart TD
+    subgraph ENTRY["Lead Entry Points"]
+        E1["📋 Manual Creation\nAdmin creates via form\nPOST /api/leads"]
+        E2["📄 CSV Import\nAdmin uploads file\nPOST /api/leads/import/csv\nBulk validation + create"]
+        E3["🌐 Landing Page Form\nPublic submits enquiry\nPOST /api/landing-page-campaigns/:id/submit\nCreates Lead + Enquiry + FormSubmission"]
+    end
+
+    E1 --> CREATE
+    E2 --> CREATE
+    E3 --> CREATE
+
+    CREATE["Lead created in DB\nstatus: OPEN\nownerId: null\nscore: 0"]
+
+    CREATE --> SCORE["leadScoring.service.ts\nCalculate lead score\n• completeness score\n• quality score\n• missing fields flagged"]
+
+    SCORE --> RULES{"LeadAssignmentRule\ncriteria match?\nkeyword · city · state"}
+    RULES -->|"match found"| ASSIGN["Auto-assign to User\nownerId set\nassignedAt timestamp\nNotification created"]
+    RULES -->|"no match"| UNASSIGNED["Lead stays unassigned\n/leads/unassigned-leads\nADMIN can manually assign"]
+
+    ASSIGN --> BREVO["Brevo sync (async)\nbrevo.service.ts\nCreate/update Brevo contact"]
+    UNASSIGNED --> BREVO
+
+    BREVO --> STATUS["Lead Status Lifecycle"]
+
+    subgraph STATUS["Status Transitions"]
+        S1["OPEN"] --> S2["WORKING\nSales actively engaging"]
+        S2 --> S3["QUALIFIED\nLead is promising"]
+        S2 --> S4["UNQUALIFIED\nNot a fit"]
+        S2 --> S5["NURTURING\nKeep warm, not ready"]
+        S3 --> S6["CONVERTED ✓\nPOST /api/leads/:id/convert\nCreates Contact record\nconvertedToContactId set"]
+    end
+
+    S6 --> CONTACT["Contact record created\nContact flows into\nOpportunity pipeline"]
+
+    style ENTRY fill:#1a2535,stroke:#2563eb
+    style CREATE fill:#1a2520,stroke:#16a34a
+    style STATUS fill:#251e35,stroke:#7c3aed
+    style S6 fill:#1a2520,stroke:#16a34a
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Campaign Targeting via Segments</h3>
+      <div class="subtitle">How leads/contacts are grouped and targeted for campaigns</div>
+      <div class="mermaid">
+flowchart LR
+    subgraph RULES["Segment Rules\n(SegmentRule table)"]
+        R1["KEYWORD rule\nleadKeywords match"]
+        R2["CITY rule\ncity = 'Mumbai'"]
+        R3["STATE rule\nstate = 'Maharashtra'"]
+        R4["PINCODE rule\npincode in range"]
+    end
+
+    RULES -->|"AND/OR logic"| SEG["Segment\n(entityType: LEAD or CONTACT)"]
+
+    SEG -->|"campaign.addMembers()"| EVAL["segment.service.ts\nDynamic query evaluation\nprisma.lead.findMany(\n  where: { keywords, city, state }\n)"]
+
+    EVAL --> MEMBERS["CampaignMember records\n(one per matched entity)"]
+    MEMBERS --> DELIVERY["CampaignDelivery records\nstatus: PENDING\n(one per member per channel)"]
+    DELIVERY --> SEND["WhatsApp / Email send"]
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB 4: SALES PIPELINE
+  ════════════════════════════════════════════ -->
+  <div class="panel" id="panel-3">
+    <div class="panel-header">
+      <h2>Sales Pipeline — Opportunity → Quote → Sales Order</h2>
+      <p>Full B2B sales flow with approval gates at each stage.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Complete Sales Pipeline Flow</h3>
+      <div class="subtitle">From contact to closed deal — with approval workflow</div>
+      <div class="mermaid">
+flowchart TD
+    CONTACT["Contact (converted from Lead)\nlinked to Account"] --> OPP
+
+    subgraph OPP["① OPPORTUNITY"]
+        O1["Create Opportunity\nPOST /api/opportunities\nstage: PROSPECT\nstatus: DRAFT"]
+        O1 --> O2["Sales progresses stages\nPROSPECT → QUALIFICATION\n→ DISCOVERY → PROPOSAL\n→ NEGOTIATION"]
+        O2 --> O3["Submit for approval\nstatus: SUBMITTED\nApprovalProcess created\n→ ADMIN notified"]
+        O3 --> O4{ADMIN decision}
+        O4 -->|"Approve"| O5["status: APPROVED\nQuote can now be created"]
+        O4 -->|"Reject"| O6["status: REJECTED\nback to SALES user"]
+        O2 --> O7["CLOSED_LOST\n(lost reason recorded)"]
+    end
+
+    O5 --> QUOTE
+
+    subgraph QUOTE["② QUOTE"]
+        Q1["Create Quote\nPOST /api/quotes\nlinked to Opportunity\nstatus: DRAFT"]
+        Q1 --> Q2["Add QuoteLineItems\nfrom PriceBookEntries\nAuto-calculate:\nsubtotal · discount\ntax · grandTotal"]
+        Q2 --> Q3["Submit for review\nstatus: IN_REVIEW"]
+        Q3 --> Q4{Approval?}
+        Q4 -->|"Approved"| Q5["status: APPROVED\nPDF generated (PDFKit)\nUploaded to S3\npdfUrl stored"]
+        Q4 -->|"Rejected"| Q6["status: REJECTED\nrejectionComment stored"]
+        Q5 --> Q7["Send to client\nstatus: PRESENTED\npresentedAt timestamp"]
+        Q7 --> Q8["Client accepts\nstatus: ACCEPTED\nacceptedAt timestamp"]
+    end
+
+    Q8 --> ORDER
+
+    subgraph ORDER["③ SALES ORDER"]
+        SO1["Create Sales Order\nPOST /api/sales-orders\nClones Quote pricing snapshot\nstatus: DRAFT"]
+        SO1 --> SO2["Submit for approval\nstatus: PENDING_APPROVAL"]
+        SO2 --> SO3{Admin approves?}
+        SO3 -->|"Yes"| SO4["status: APPROVED\napprovedAt timestamp"]
+        SO3 -->|"No"| SO5["status: ON_HOLD or CANCELLED"]
+        SO4 --> SO6["Fulfillment begins\nIN_FULFILLMENT → SHIPPED\n→ DELIVERED"]
+    end
+
+    style OPP fill:#1a2535,stroke:#2563eb
+    style QUOTE fill:#1a2520,stroke:#16a34a
+    style ORDER fill:#251e35,stroke:#7c3aed
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Approval Process Detail</h3>
+      <div class="subtitle">How the ApprovalProcess table drives notifications and state changes</div>
+      <div class="mermaid">
+sequenceDiagram
+    actor Sales as 👤 Sales User
+    participant API as Express API
+    participant DB as PostgreSQL
+    participant NOTIFY as Notification System
+    participant Email as Plunk Email
+    actor Mgr as 👔 Admin/Manager
+
+    Sales->>API: POST /api/approvals\n{ targetObjectName: "OPP", targetRecordId, requestedToId }
+    API->>DB: prisma.approvalProcess.create(\n  { status: PENDING, requestedToId, createdById }\n)
+    API->>DB: Update Opportunity status → SUBMITTED
+    API->>NOTIFY: createNotification(\n  userId: requestedToId,\n  type: APPROVAL_REQUESTED\n)
+    NOTIFY->>DB: prisma.notification.create(...)
+    DB-->>Mgr: 🔔 Bell notification appears
+
+    Mgr->>API: PATCH /api/approvals/:id\n{ status: "APPROVED", comment }
+    API->>DB: Update ApprovalProcess.status = APPROVED\ncompletedDate = now()\nlastActorId = managerId
+    API->>DB: Update Opportunity.status = APPROVED
+    API->>NOTIFY: createNotification(\n  userId: salesUserId,\n  type: APPROVAL_APPROVED\n)
+    API->>Email: emailService.send(salesUser, "Your quote was approved")
+    DB-->>Sales: 🔔 Approval notification
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Pricing Model</h3>
+      <div class="subtitle">PriceBook → PriceBookEntry → LineItem pricing chain</div>
+      <div class="mermaid">
+flowchart LR
+    CURR["Currency\n(code, name, symbol)\ne.g. INR, USD, EUR"] --> PB
+
+    PB["PriceBook\n(name, currencyCode, isActive)\ne.g. 'India Standard Price'"] --> PBE
+
+    PBE["PriceBookEntry\n(productId, priceBookId)\nlistPrice · useStandardPrice\nisActive"] --> LI
+
+    PROD["Product\n(name, code, categoryId)\nActive/Inactive flag\nImageUrl"] --> PBE
+
+    subgraph LI["Line Items (per transaction)"]
+        OLI["OpportunityLineItem\nquantity · listPrice\nunitPrice · discount\ntotalPrice"]
+        QLI["QuoteLineItem\n(same fields + sortOrder)"]
+        SOLI["SalesOrderLineItem\n(snapshot from Quote)"]
+    end
+
+    OLI -->|"copied to"| QLI
+    QLI -->|"snapshot to"| SOLI
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB 5: WHATSAPP CAMPAIGNS
+  ════════════════════════════════════════════ -->
+  <div class="panel" id="panel-4">
+    <div class="panel-header">
+      <h2>WhatsApp Campaign Flow</h2>
+      <p>End-to-end: from WhatsApp number setup to message delivery webhook processing.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Complete WhatsApp Campaign Lifecycle</h3>
+      <div class="subtitle">Setup → Creation → Scheduling → Sending → Webhook tracking</div>
+      <div class="mermaid">
+flowchart TD
+    subgraph SETUP["① One-Time Setup (Admin)"]
+        S1["Add WhatsApp Number\nPOST /api/whatsapp/accounts\nMSG91 API key provided"] --> S2["API key encrypted\nAES-256-GCM\nENCRYPTION_KEY env var\nStored: encryptedApiKey + iv + authTag"]
+        S2 --> S3["Sync Templates\nPOST /api/whatsapp/accounts/:id/sync-templates\nFetch from MSG91 API\nSave to WhatsAppTemplate table"]
+    end
+
+    subgraph CREATE["② Campaign Creation (Admin)"]
+        C1["Create Campaign\nPOST /api/campaigns\n{ name, startDate }"] --> C2["Configure WhatsApp\nPOST /api/whatsapp/campaigns/:id/config\nSelect: number + template + segment\nSet scheduledAt datetime"]
+        C2 --> C3["Add Recipients\nPOST /api/campaigns/:id/members\nsegment.service.ts evaluates rules\nFilter leads/contacts by\nkeyword · city · state · pincode"]
+        C3 --> C4["CampaignMember records created\n(one per recipient)"]
+        C4 --> C5["CampaignDelivery records created\nstatus: PENDING\n(one per member)"]
+    end
+
+    subgraph SCHED["③ Background Scheduler (every 60s)"]
+        SC1["processScheduledWhatsappCampaigns()"] --> SC2["prisma.whatsAppCampaignConfig.findMany\nwhere scheduledAt ≤ now\ntake: 20 per run"]
+        SC2 --> SC3{Due campaigns\nfound?}
+        SC3 -->|"No"| SC4["Return — sleep 60s"]
+        SC3 -->|"Yes"| SC5["Count PENDING deliveries\nfor each campaign"]
+        SC5 --> SC6{Pending > 0?}
+        SC6 -->|"No"| SC7["Set scheduledAt = null\n(don't re-process)"]
+        SC6 -->|"Yes"| SC8["sendService.sendCampaign(campaignId)"]
+    end
+
+    subgraph SEND["④ Actual Sending (SendService)"]
+        SE1["Fetch PENDING CampaignDelivery\nrecords in batches"] --> SE2["Decrypt MSG91 API key\nAES-256-GCM decrypt"]
+        SE2 --> SE3["Build MSG91 payload\n{ template, params, recipient }"]
+        SE3 --> SE4["POST to MSG91 API\n(WhatsApp message)"]
+        SE4 --> SE5["Update CampaignDelivery:\nstatus: SENT\nsentAt: now()\nproviderMessageId: MSG91 ref"]
+        SE5 --> SE6["Set scheduledAt = null\n(clear after sending)"]
+    end
+
+    subgraph WEBHOOK["⑤ Delivery Tracking (Webhooks)"]
+        W1["MSG91 → POST /api/webhook/msg91\n(no auth required, public endpoint)"] --> W2["WebhookService.handleWebhook()\nMatch providerMessageId\nto CampaignDelivery"]
+        W2 --> W3{Event type?}
+        W3 -->|"delivered"| W4["Update status: DELIVERED\ndeliveredAt timestamp"]
+        W3 -->|"read"| W5["Update status: READ\nreadAt timestamp"]
+        W3 -->|"failed"| W6["Update status: FAILED\nerrorCode + errorMessage"]
+        W3 -->|"STOP keyword"| W7["OptOutService.addOptOut()\nprisma.optOut.create(\n{ phone, channel: 'whatsapp' }\n)\nFuture campaigns skip this number"]
+        W4 & W5 & W6 & W7 --> W8["Store raw payload\nin WebhookEvent table"]
+    end
+
+    SETUP --> CREATE
+    CREATE --> SCHED
+    SC8 --> SEND
+    SEND --> WEBHOOK
+
+    style SETUP fill:#1a2535,stroke:#2563eb
+    style CREATE fill:#1a2520,stroke:#16a34a
+    style SCHED fill:#251e35,stroke:#7c3aed
+    style SEND fill:#251a1a,stroke:#dc2626
+    style WEBHOOK fill:#1e251a,stroke:#16a34a
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>MSG91 API Encryption Flow</h3>
+      <div class="subtitle">How API keys are stored and retrieved securely</div>
+      <div class="mermaid">
+flowchart LR
+    A["Admin enters\nMSG91 API key"] --> B["crypto.utils.ts\nAES-256-GCM encrypt\nkey = ENCRYPTION_KEY (32 chars)\nrandom IV generated"]
+    B --> C["Store in WhatsAppNumber:\nencryptedApiKey (base64)\niv (base64)\nauthTag (base64)\nmaskedTail (last 4 chars)"]
+    C --> D["At send time:\ncrypto.utils.ts\nAES-256-GCM decrypt\nusing same ENCRYPTION_KEY + iv + authTag"]
+    D --> E["Live API key\npassed to MSG91 client"]
+    E --> F["MSG91 API call\nreturns providerMessageId"]
+
+    style A fill:#1a2535,stroke:#2563eb
+    style C fill:#251a1a,stroke:#dc2626
+    style E fill:#1a2520,stroke:#16a34a
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB 6: KPT ONBOARDING
+  ════════════════════════════════════════════ -->
+  <div class="panel" id="panel-5">
+    <div class="panel-header">
+      <h2>KPT Partner Onboarding Flow</h2>
+      <p>5-stage dealer onboarding: from public application form to signed agreement and activation.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>5-Stage Onboarding Pipeline</h3>
+      <div class="subtitle">Prospect → Field Verified → Docs Collected → Reviewed → Agreement Signed</div>
+      <div class="mermaid">
+flowchart TD
+    START(["Prospect wants to\nbecome KPT dealer"]) --> S1
+
+    subgraph S1["Stage 1 — Application (Public, No Login)"]
+        A1["Fill form at\n/partner/apply\nNo login required"] --> A2["POST /api/partner/apply\nZod validation:\nownerName, firmName, mobile\nemail, city, district, state\npincode, productInterest"]
+        A2 --> A3["Deduplication check\nOR mobile = ? OR email = ?"]
+        A3 -->|"duplicate"| A_ERR["409 Conflict\nReturn existing CRN"]
+        A3 -->|"new"| A4["Generate CRN\nSELECT generate_kpt_crn()\nPostgreSQL function\nformat: KPT-CP-YYYY-NNNNN"]
+        A4 --> A5["prisma.kptPartner.create(\n  currentStage: 1\n  status: 'enquiry_received'\n)"]
+        A5 --> A6["prisma.kptFieldVerification.create\n(blank record for exec)"]
+        A6 --> A7["SMS: 'Your CRN is KPT-CP-2026-00042'\nEmail: welcome + tracking link"]
+    end
+
+    A7 --> S2
+
+    subgraph S2["Stage 2 — Field Verification (KPT Admin + Field Exec)"]
+        B1["KPT Admin assigns\nfield exec in admin panel\n/kpt-admin/field/crn"] --> B2["Update KptFieldVerification:\nassignedExecId\nassignedExecName\nscheduledDate"]
+        B2 --> B3["Field exec visits shop\nFills form:\n• shopDimensions\n• locationScore\n• roadVisibility\n• marketPotential\n• nearestDealer\n• geoLat, geoLng (Leaflet map)\n• shopPhotoPath (Supabase Storage)\n• execNotes"]
+        B3 --> B4["visitedAt + verifiedAt set"]
+    end
+
+    B4 --> S3
+
+    subgraph S3["Stage 3 — Document Collection (Partner Self-Service)"]
+        C1["Partner logs in\nCRN + mobile OTP"] --> C2["Upload documents\n/partner/documents\nPOST /api/partner/upload\nFiles → Supabase Storage"]
+        C2 --> C3["prisma.kptDocument.create(\n  docType, storagePath\n  verifyStatus: 'pending'\n)"]
+        C3 --> C4["Auto-verification\nPOST /api/partner/verify/docType\nGST → gstincheck.co.in API\nPAN, Aadhaar → external APIs"]
+        C4 --> C5{Verification result}
+        C5 -->|"verified"| C6["verifyStatus: 'verified'"]
+        C5 -->|"needs human check"| C7["verifyStatus: 'manual_review'"]
+        C5 -->|"failed"| C8["verifyStatus: 'failed'\nfailReason stored\nPartner re-uploads"]
+        C6 & C7 --> C9["POST /api/partner/stage/advance\n{ targetStage: 4 }"]
+        C9 --> C10{"Count unverified docs\nwhere NOT IN\n['verified', 'manual_review']"}
+        C10 -->|"count > 0"| C11["422 Blocked\n'3 documents still pending'"]
+        C10 -->|"count = 0"| C12["prisma.$transaction([\n  kptPartner.update(currentStage: 4)\n  kptStatusHistory.create(...)\n  kptApprovalLog.create(...)\n])"]
+    end
+
+    C12 --> S4
+
+    subgraph S4["Stage 4 — Internal KPT Review (Admin)"]
+        D1["KPT Admin reviews:\n• Field verification data\n• All uploaded documents\n• Business info"] --> D2{Decision}
+        D2 -->|"Approve"| D3["Advance to Stage 5\nkptApprovalLog entry"]
+        D2 -->|"Request changes"| D4["Partner notified\nStage stays at 4"]
+    end
+
+    D3 --> S5
+
+    subgraph S5["Stage 5 — eSign Agreement (Partner)"]
+        E1["Partner views agreement\n/partner/agreement"] --> E2["KptAgreement record created\nsignStatus: 'pending'"]
+        E2 --> E3["eSign provider called\n(Leegality/Sandbox/Perfios)"]
+        E3 --> E4["POST /api/webhooks/esign\nWebhook on completion"]
+        E4 --> E5["KptAgreement.signedAt set\nsignStatus: 'signed'\nkptPartner.status: 'active'\nkptPartner.currentStage: 5"]
+    end
+
+    E5 --> DONE(["✅ Active KPT\nAuthorised Channel Partner"])
+
+    style S1 fill:#1a2535,stroke:#2563eb
+    style S2 fill:#1a2520,stroke:#16a34a
+    style S3 fill:#251e35,stroke:#7c3aed
+    style S4 fill:#25201a,stroke:#d97706
+    style S5 fill:#1e251a,stroke:#16a34a
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Public CRN Tracker</h3>
+      <div class="subtitle">Anyone with a CRN can track their application status without logging in</div>
+      <div class="mermaid">
+flowchart LR
+    A["Prospect visits\n/partner/track/KPT-CP-2026-00042\n(no login required)"] --> B["GET /api/partner/track/crn\nNext.js API route"]
+    B --> C["prisma.kptPartner.findUnique({ crn })\nSelect: currentStage, status, createdAt\nExclude: sensitive documents, exec notes"]
+    C --> D["prisma.kptStatusHistory.findMany({ crn })"]
+    D --> E["StageStepper component\nVisual 5-step progress bar\nStatusBadge + history timeline"]
+
+    style A fill:#1a2535,stroke:#2563eb
+    style E fill:#1a2520,stroke:#16a34a
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB 7: DATABASE SCHEMA
+  ════════════════════════════════════════════ -->
+  <div class="panel" id="panel-6">
+    <div class="panel-header">
+      <h2>Database Schema — Entity Relationships</h2>
+      <p>Key Prisma model relationships across all 6 functional domains.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>CRM Core — Users, Leads, Contacts, Accounts</h3>
+      <div class="mermaid">
+erDiagram
+    User {
+        int id PK
+        string email
+        string passwordHash
+        UserRole role
+        Region region
+        string firstName
+        string lastName
+    }
+    Lead {
+        int id PK
+        string email
+        string firstName
+        LeadStatus status
+        LeadSource source
+        int ownerId FK
+        int convertedToContactId FK
+        int score
+        datetime deletedAt
+    }
+    Contact {
+        int id PK
+        string name
+        string email
+        int accountId FK
+        bool emailOptOut
+        bool whatsappOptOut
+    }
+    Account {
+        int id PK
+        string name
+        string gstin
+        string industry
+    }
+    LeadRemark {
+        int id PK
+        int leadId FK
+        int userId FK
+        string remark
+    }
+    LeadAssignmentRule {
+        int id PK
+        string name
+        json criteria
+        int assignedUserId FK
+        int priority
+    }
+
+    User ||--o{ Lead : "owns"
+    User ||--o{ LeadRemark : "writes"
+    User ||--o{ LeadAssignmentRule : "assigned"
+    Lead ||--o{ LeadRemark : "has"
+    Lead }o--|| Contact : "converts to"
+    Contact }o--|| Account : "belongs to"
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Sales Pipeline — Opportunity → Quote → SalesOrder</h3>
+      <div class="mermaid">
+erDiagram
+    Opportunity {
+        int id PK
+        string opportunityNumber
+        OpportunityStage stage
+        OpportunityStatus status
+        decimal amount
+        int accountId FK
+        int contactId FK
+        int priceBookId FK
+        int ownerId FK
+    }
+    Quote {
+        int id PK
+        string quoteNumber
+        QuoteStatus status
+        decimal grandTotal
+        string pdfUrl
+        int opportunityId FK
+        int accountId FK
+        int preparedById FK
+        int approvedById FK
+    }
+    SalesOrder {
+        int id PK
+        string orderNumber
+        SalesOrderStatus status
+        decimal grandTotal
+        int quoteId FK
+        int accountId FK
+        int ownerId FK
+    }
+    ApprovalProcess {
+        int id PK
+        ApprovalTargetObject targetObjectName
+        ApprovalStatus status
+        int targetRecordId
+        int requestedToId FK
+        int createdById FK
+    }
+    PriceBook {
+        int id PK
+        string name
+        string currencyCode FK
+    }
+
+    Opportunity ||--o{ Quote : "generates"
+    Quote ||--o{ SalesOrder : "becomes"
+    Opportunity ||--o{ ApprovalProcess : "requests"
+    Quote ||--o{ ApprovalProcess : "requests"
+    PriceBook ||--o{ Opportunity : "prices"
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>KPT Partner Onboarding Models</h3>
+      <div class="mermaid">
+erDiagram
+    KptPartner {
+        string id PK
+        string crn UK
+        string ownerName
+        string firmName
+        string mobile UK
+        string email UK
+        int currentStage
+        string status
+    }
+    KptFieldVerification {
+        string id PK
+        string crn UK FK
+        string assignedExecId
+        float geoLat
+        float geoLng
+        string shopPhotoPath
+        datetime visitedAt
+    }
+    KptDocument {
+        string id PK
+        string crn FK
+        int stage
+        string docType
+        string storagePath
+        string verifyStatus
+        string failReason
+    }
+    KptAgreement {
+        string id PK
+        string crn UK FK
+        string esignRef
+        string signStatus
+        datetime signedAt
+    }
+    KptApprovalLog {
+        string id PK
+        string crn FK
+        string action
+        string doneBy
+        string notes
+    }
+    KptStatusHistory {
+        string id PK
+        string crn FK
+        string fromStatus
+        string toStatus
+    }
+    KptOtp {
+        string id PK
+        string mobile
+        string otpHash
+        string crn
+        datetime expiresAt
+    }
+
+    KptPartner ||--|| KptFieldVerification : "has"
+    KptPartner ||--o{ KptDocument : "uploads"
+    KptPartner ||--|| KptAgreement : "signs"
+    KptPartner ||--o{ KptApprovalLog : "logs"
+    KptPartner ||--o{ KptStatusHistory : "tracks"
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Channel Partners, Inventory & Stock</h3>
+      <div class="mermaid">
+erDiagram
+    ChannelPartner {
+        int id PK
+        string code UK
+        string name
+        PartnerType type
+        PartnerTier tier
+        PartnerStatus status
+        float creditLimit
+        float currentMonthSales
+        float ytdSales
+    }
+    InventoryItem {
+        int id PK
+        string productName
+        string sku UK
+        int totalQty
+        int minStockQty
+        StockStatus stockStatus
+    }
+    StockEntry {
+        int id PK
+        int partnerId FK
+        int inventoryItemId FK
+        int stockQty
+        int minStockQty
+        StockStatus stockStatus
+    }
+    PartnerIncentive {
+        int id PK
+        int partnerId FK
+        string period
+        float salesAmount
+        float incentivePercent
+        float incentiveAmount
+        IncentiveStatus status
+    }
+    IncentiveSlab {
+        int id PK
+        PartnerTier tier
+        float minSaleAmount
+        float maxSaleAmount
+        float incentivePercent
+    }
+
+    ChannelPartner ||--o{ StockEntry : "holds"
+    InventoryItem ||--o{ StockEntry : "tracked in"
+    ChannelPartner ||--o{ PartnerIncentive : "earns"
+    IncentiveSlab ||--o{ PartnerIncentive : "rates"
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB 8: REQUEST LIFECYCLE
+  ════════════════════════════════════════════ -->
+  <div class="panel" id="panel-7">
+    <div class="panel-header">
+      <h2>Request Lifecycle — Anatomy of a Single API Call</h2>
+      <p>Exactly what happens from the moment a user clicks a button to when data appears on screen.</p>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Frontend → API → DB → Response</h3>
+      <div class="subtitle">Full trace of GET /api/leads (authenticated SALES user)</div>
+      <div class="mermaid">
+sequenceDiagram
+    actor User as 👤 Sales User
+    participant RC as React Component
+    participant RQ as TanStack React Query
+    participant AX as Axios Instance
+    participant AC as AuthContext
+    participant EXP as Express :4000
+    participant MW as requireAuth Middleware
+    participant CTR as LeadsController
+    participant PR as Prisma ORM
+    participant PG as PostgreSQL
+
+    User->>RC: Navigates to /leads page
+    RC->>RQ: useQuery(['leads', filters])
+    RQ->>AX: GET http://localhost:4000/api/leads?page=1&limit=20
+    AX->>AC: Read token from AuthContext
+    AC-->>AX: Bearer eyJhbG...
+    AX->>EXP: GET /api/leads\nAuthorization: Bearer eyJhbG...
+
+    Note over EXP,MW: Middleware chain
+    EXP->>MW: requireAuth(req, res, next)
+    MW->>MW: Extract token from Authorization header
+    MW->>MW: verifyToken(token) → decoded JWT
+    MW->>PR: prisma.user.findUnique({ id: decoded.userId })
+    PR->>PG: SELECT * FROM users WHERE id = ?
+    PG-->>PR: User row
+    PR-->>MW: { id, email, role: "SALES", ... }
+    MW->>MW: Attach req.user = { id, email, role }
+    MW->>CTR: next()
+
+    Note over CTR,PG: Controller logic
+    CTR->>CTR: Parse query params\npage=1, limit=20
+    CTR->>CTR: Build where clause:\n{ deletedAt: null, ownerId: req.user.id }\n(SALES only sees own leads)
+    CTR->>PR: prisma.lead.findMany(\n  where, skip, take,\n  include: { owner, keywords, remarks }\n  orderBy: { createdAt: desc }\n)
+    PR->>PG: SELECT leads.*, users.*, keywords.*\nFROM leads\nLEFT JOIN users ON leads.owner_id = users.id\n...\nWHERE leads.deleted_at IS NULL\nAND leads.owner_id = $1\nLIMIT 20 OFFSET 0
+    PG-->>PR: Lead rows
+    PR-->>CTR: Lead[] with relations
+    CTR->>PR: prisma.lead.count({ where })
+    PG-->>CTR: totalCount: 47
+
+    CTR->>EXP: res.json({ data: leads, pagination: { page, total, pages } })
+    EXP-->>AX: 200 JSON response
+    AX-->>RQ: Response data
+    RQ->>RQ: Cache under key ['leads', filters]\n(staleTime, gcTime managed)
+    RQ-->>RC: { data: leads, isLoading: false }
+    RC->>User: Renders lead table with 20 rows
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Mutation Flow — Creating a Lead</h3>
+      <div class="subtitle">Form submit → validation → API → DB → cache invalidation → UI update</div>
+      <div class="mermaid">
+sequenceDiagram
+    actor Admin as 👤 Admin
+    participant FORM as React Hook Form + Zod
+    participant MUT as useMutation (React Query)
+    participant API as Express API
+    participant AUDIT as AuditLog
+    participant NOTIF as Notification
+    participant RQ as React Query Cache
+
+    Admin->>FORM: Fill AddLeadModal form + Submit
+    FORM->>FORM: Zod schema validation\n{ email, firstName, phone, city, ... }
+    FORM-->>Admin: Show field errors if invalid
+
+    FORM->>MUT: mutate({ email, firstName, ... })
+    MUT->>API: POST /api/leads\nAuthorization: Bearer token\n{ email, firstName, phone, ... }
+
+    Note over API: Controller logic
+    API->>API: Validate required fields
+    API->>API: Check duplicate email
+    API->>API: Parse phone → { countryCode, localNumber }
+    API->>API: prisma.lead.create({ data })
+    API->>API: leadScoring.service.ts\nCalculate score + completeness
+    API->>API: Check LeadAssignmentRules
+    API-->>API: Auto-assign if rule matches
+
+    API->>AUDIT: recordAuditLog(\n  action: 'CREATE', entityType: 'Lead'\n  newValues: { email, firstName }\n)
+    API->>NOTIF: createNotification(\n  userId: assignedUserId\n  type: LEAD_ASSIGNED\n)
+    API->>API: brevo.service.ts sync (async, fire-and-forget)
+
+    API-->>MUT: 201 { lead }
+
+    MUT->>RQ: queryClient.invalidateQueries(['leads'])
+    RQ->>API: Automatic refetch of lead list
+    API-->>RQ: Updated leads[]
+    RQ-->>FORM: onSuccess callback
+    FORM->>Admin: Close modal + Sonner toast "Lead created"
+    FORM->>Admin: Lead table re-renders with new row
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Notification Bell — Real-time Polling</h3>
+      <div class="subtitle">How in-app notifications flow from any event to the bell icon</div>
+      <div class="mermaid">
+flowchart LR
+    subgraph EVENTS["Any System Event"]
+        E1["Lead assigned"]
+        E2["Approval requested"]
+        E3["Quote approved"]
+        E4["Low stock alert"]
+        E5["Password changed"]
+    end
+
+    EVENTS -->|"createNotification(userId, type, title, message)"| DB[("notifications table\n{ userId, type, title,\nmessage, isRead: false\nlink, createdAt }")]
+
+    DB -->|"GET /api/notifications\n(refetchInterval: 30s)"| POLL["React Query\nuseQuery(['notifications'])\nRefetches every 30 seconds"]
+
+    POLL --> BELL["🔔 Bell icon in header\nBadge count = unread\nDropdown list of notifications"]
+
+    BELL -->|"User clicks notification"| MARK["PATCH /api/notifications/:id/read\nisRead: true\nreadAt: now()"]
+    BELL -->|"User clicks link"| NAV["Navigate to\nrelated page\n(lead, quote, etc.)"]
+
+    style EVENTS fill:#1a2535,stroke:#2563eb
+    style DB fill:#251e35,stroke:#7c3aed
+    style BELL fill:#1a2520,stroke:#16a34a
+      </div>
+    </div>
+
+    <div class="diagram-card">
+      <h3>Complete System Data Flow Map</h3>
+      <div class="subtitle">Everything in one view — how data moves between all layers</div>
+      <div class="mermaid">
+flowchart TD
+    subgraph USERS["User Types"]
+        U1["👤 CRM Admin/Sales\nJWT via Express API"]
+        U2["👔 KPT Partner\nOTP + Cookie via Next.js routes"]
+        U3["🏢 KPT Admin\nSupabase Auth"]
+        U4["🌐 Public\nNo auth"]
+    end
+
+    subgraph FRONTENDS["Next.js 15 Frontend"]
+        F1["CRM Pages\n/leads /sales /campaigns\n/channel-partners /inventory"]
+        F2["Partner Portal\n/partner/dashboard\n/partner/documents\n/partner/agreement"]
+        F3["KPT Admin\n/kpt-admin/partners\n/kpt-admin/field"]
+        F4["Public Pages\n/partner/apply\n/partner/track/crn"]
+        F5["Next.js API Routes\n/api/partner/*\n/api/admin/*\n/api/webhooks/esign"]
+    end
+
+    subgraph BACKEND["Express API :4000"]
+        B1["Auth Layer\nJWT verify · role check"]
+        B2["Business Logic\n38 controllers"]
+        B3["Service Layer\nWhatsApp · Email\nS3 · GST · Brevo"]
+        B4["Scheduler\nWhatsApp every 60s"]
+    end
+
+    subgraph DATA["Data Layer"]
+        D1[("PostgreSQL\nSupabase-hosted")]
+        D2["Supabase Storage\nDocuments + Photos"]
+        D3["AWS S3\nMedia + PDFs"]
+    end
+
+    subgraph EXT["External APIs"]
+        X1["MSG91\nWhatsApp + SMS"]
+        X2["Plunk\nEmail"]
+        X3["Brevo\nCRM sync"]
+        X4["GST API"]
+        X5["eSign providers"]
+    end
+
+    U1 --> F1
+    U2 --> F2
+    U3 --> F3
+    U4 --> F4
+
+    F1 -->|"axios + JWT\nTanStack Query"| B1
+    F2 & F3 & F4 --> F5
+    F5 -->|"Prisma direct"| D1
+    F5 -->|"Supabase SDK"| D2
+    B1 --> B2
+    B2 --> B3
+    B2 -->|"Prisma ORM"| D1
+    B3 -->|"presigned URLs"| D3
+    B4 --> B3
+    B3 --> X1 & X2 & X3 & X4 & X5
+    X1 -->|"webhooks"| B2
+
+    style USERS fill:#1a1d27,stroke:#6c8ef7
+    style FRONTENDS fill:#1a2535,stroke:#2563eb
+    style BACKEND fill:#1a2520,stroke:#16a34a
+    style DATA fill:#251e35,stroke:#7c3aed
+    style EXT fill:#251a1a,stroke:#dc2626
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#1a1d27',
+      primaryColor: '#22263a',
+      primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#3d4466',
+      lineColor: '#6c8ef7',
+      secondaryColor: '#1a2535',
+      tertiaryColor: '#251e35',
+      edgeLabelBackground: '#1a1d27',
+      clusterBkg: '#1a1d27',
+      clusterBorder: '#3d4466',
+      titleColor: '#e2e8f0',
+      nodeBorder: '#3d4466',
+      mainBkg: '#22263a',
+      nodeTextColor: '#e2e8f0',
+      labelTextColor: '#e2e8f0',
+      signalColor: '#6c8ef7',
+      signalTextColor: '#e2e8f0',
+      actorBkg: '#22263a',
+      actorBorder: '#6c8ef7',
+      actorTextColor: '#e2e8f0',
+      actorLineColor: '#6c8ef7',
+      noteBkgColor: '#251e35',
+      noteTextColor: '#e2e8f0',
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 60, messageMargin: 40 },
+    er: { diagramPadding: 30, layoutDirection: 'TB', minEntityWidth: 100 },
+  });
+
+  function showTab(index) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', i === index);
+    });
+    document.querySelectorAll('.panel').forEach((p, i) => {
+      p.classList.toggle('active', i === index);
+    });
+  }
+</script>
+
+</body>
+</html>

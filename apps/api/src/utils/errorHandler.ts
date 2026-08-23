@@ -225,9 +225,10 @@ export function handleError(
 
   // Check if it's a Prisma validation error
   if (error instanceof Prisma.PrismaClientValidationError) {
+    console.error(`[PrismaClientValidationError] in ${context}:`, error.message);
     res.status(400).json({
-      error: `${context} failed: Invalid data provided`,
-      details: process.env.NODE_ENV === 'development' ? error.message : 'Please check your input',
+      error: 'Invalid data provided',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Validation failed',
       code: ErrorCode.VALIDATION_ERROR,
     } as ErrorResponse);
     return;

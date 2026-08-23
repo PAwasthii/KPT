@@ -242,7 +242,7 @@ export default function AakramanLoginPage() {
 
             <div className="pt-2 text-center text-sm text-slate-500">
               <a href="/login" className="font-semibold text-amber-600 hover:text-amber-500">
-                Back to Innovun login
+                Back to KPT login
               </a>
             </div>
           </CardContent>

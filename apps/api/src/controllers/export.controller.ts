@@ -341,11 +341,11 @@ export class ExportController {
         );
       }
 
-      // Early configuration check for Plunk
-      if (!process.env.PLUNK_API_KEY || !process.env.PLUNK_FROM_EMAIL) {
+      // Early configuration check for Resend
+      if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
         return handleValidationError(
           res,
-          "Email service not configured. Please set PLUNK_API_KEY and PLUNK_FROM_EMAIL in the API environment.",
+          "Email service not configured. Please set RESEND_API_KEY and RESEND_FROM_EMAIL in the API environment.",
           "email",
           "Email selected leads"
         );
@@ -408,27 +408,24 @@ export class ExportController {
       const buffer = await workbook.xlsx.writeBuffer();
       const base64 = Buffer.from(buffer).toString("base64");
 
-      // Defer to email service to send with attachment
+      // Send Excel file via email using Resend
       const { emailService } = await import("../services/email.service.js");
       const ok = await emailService.sendEmail({
         to,
         subject: `Leads Export (${items.length})`,
-        body: "Please find attached the selected leads in Excel format.",
-        name: "",
-        replyTo: undefined,
-        // @ts-ignore - extended in runtime below when we add attachments support
-        attachments: {
-          "leads.xlsx": {
-            content: base64,
-            mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        text: "Please find attached the selected leads in Excel format.",
+        attachments: [
+          {
+            filename: "leads.xlsx",
+            content: Buffer.from(base64, "base64"),
           },
-        },
-      } as any);
+        ],
+      });
 
       if (!ok) {
         return handleValidationError(
           res,
-          "Failed to send email (Plunk API rejected request). Verify PLUNK credentials and sender settings.",
+          "Failed to send email. Verify RESEND_API_KEY and RESEND_FROM_EMAIL configuration.",
           "email",
           "Email selected leads"
         );

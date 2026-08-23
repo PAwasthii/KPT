@@ -15,14 +15,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary CTA — brand guide 5.2: teal by default, deep indigo on hover.
         default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-brand-indigo hover:shadow-sm",
+          "bg-primary text-primary-foreground shadow-xs hover:bg-blue-700 hover:shadow-sm",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        // Secondary actions — deep-indigo outline (brand guide 30% share), fills solid on hover.
+          "bg-destructive text-white hover:bg-red-600 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
-          "border border-brand-indigo text-brand-indigo bg-background shadow-xs hover:bg-brand-indigo hover:text-white hover:shadow-sm dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-primary text-primary bg-background shadow-xs hover:bg-primary hover:text-white hover:shadow-sm dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:

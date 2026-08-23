@@ -7,6 +7,18 @@ const channelPartnerController = new ChannelPartnerController();
 // GET /api/kpt/channel-partners — paginated list
 router.get('/', channelPartnerController.getAll.bind(channelPartnerController));
 
+// GET /api/kpt/channel-partners/incentives — all incentives flat list (static before /:id)
+router.get('/incentives', channelPartnerController.getAllIncentives.bind(channelPartnerController));
+
+// GET /api/kpt/channel-partners/eligible-applications — KptPartner applications eligible for activation
+router.get('/eligible-applications', channelPartnerController.getEligibleApplications.bind(channelPartnerController));
+
+// GET /api/kpt/channel-partners/activate-info/:crn — prefill data from KptPartner application
+router.get('/activate-info/:crn', channelPartnerController.getApplicationForActivation.bind(channelPartnerController));
+
+// POST /api/kpt/channel-partners/activate/:crn — create ChannelPartner from approved application
+router.post('/activate/:crn', channelPartnerController.activateFromApplication.bind(channelPartnerController));
+
 // GET /api/kpt/channel-partners/:id — single partner with relations
 router.get('/:id', channelPartnerController.getById.bind(channelPartnerController));
 

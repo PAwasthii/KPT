@@ -3,6 +3,13 @@ import { prisma } from '@repo/db';
 import { AuditCategory, StockStatus } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError } from '../utils/errorHandler.js';
 import { recordAuditLog } from '../utils/audit.utils.js';
+import { createNotification, notifyAdmins } from './notification.controller.js';
+
+const STOCK_ALERT_LABELS: Record<string, string> = {
+  LOW: 'Low Stock',
+  CRITICAL: 'Critical Stock',
+  OUT_OF_STOCK: 'Out of Stock',
+};
 
 function computeStockStatus(stockQty: number, minStockQty: number): StockStatus {
   if (stockQty === 0) return StockStatus.OUT_OF_STOCK;
@@ -189,6 +196,25 @@ export class StockController {
         category: AuditCategory.SALES_MANAGEMENT,
       });
 
+      createNotification({
+        userId: req.user!.id,
+        type: 'STOCK_DISPATCHED',
+        title: 'Stock Dispatched',
+        message: `${qty} unit(s) of "${entry.productName}" dispatched to ${partner.name}.`,
+        link: '/stock-visibility/distributor',
+      }).catch(() => {});
+
+      if (stockStatus !== StockStatus.HEALTHY) {
+        const label = STOCK_ALERT_LABELS[stockStatus] ?? stockStatus;
+        notifyAdmins({
+          type: stockStatus === StockStatus.OUT_OF_STOCK ? 'STOCK_OUT_OF_STOCK'
+            : stockStatus === StockStatus.CRITICAL ? 'STOCK_CRITICAL_ALERT' : 'STOCK_LOW_ALERT',
+          title: `${label} — ${entry.productName} at ${partner.name}`,
+          message: `${partner.name}'s stock of "${entry.productName}" (SKU: ${entry.sku}) is at ${qty} unit(s).`,
+          link: '/stock-visibility/alerts',
+        }).catch(() => {});
+      }
+
       return res.status(201).json({ success: true, data: entry });
     } catch (error) {
       handleError(error, res, 'Create stock entry');
@@ -260,6 +286,21 @@ export class StockController {
         newValues: { stockQty: newQty, stockStatus },
         category: AuditCategory.SALES_MANAGEMENT,
       });
+
+      if (stockStatus !== StockStatus.HEALTHY && stockStatus !== existing.stockStatus) {
+        const label = STOCK_ALERT_LABELS[stockStatus] ?? stockStatus;
+        const partner = await prisma.channelPartner.findUnique({
+          where: { id: existing.partnerId },
+          select: { name: true },
+        });
+        notifyAdmins({
+          type: stockStatus === StockStatus.OUT_OF_STOCK ? 'STOCK_OUT_OF_STOCK'
+            : stockStatus === StockStatus.CRITICAL ? 'STOCK_CRITICAL_ALERT' : 'STOCK_LOW_ALERT',
+          title: `${label} — ${existing.productName} at ${partner?.name ?? 'Distributor'}`,
+          message: `Stock of "${existing.productName}" at ${partner?.name ?? 'distributor'} dropped to ${newQty} unit(s).`,
+          link: '/stock-visibility/alerts',
+        }).catch(() => {});
+      }
 
       return res.json({ success: true, data: updated });
     } catch (error) {

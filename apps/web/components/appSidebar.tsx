@@ -31,6 +31,11 @@ import {
   LineChart,
   Trophy,
   Shield,
+  UserCheck,
+  Banknote,
+  BookOpen,
+  Target,
+  CheckSquare,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -60,10 +65,11 @@ export function AppSidebar() {
     setIsClient(true);
   }, []);
 
-  const isChannelPartnersActive = pathname.startsWith("/channel-partners");
+  const isChannelPartnersActive = pathname.startsWith("/channel-partners") || pathname.startsWith("/partner-applications");
   const isStockInventoryActive = pathname.startsWith("/stock-inventory");
   const isStockManagementActive = pathname.startsWith("/stock-management") || pathname.startsWith("/stock-visibility");
   const isPerformanceActive = pathname.startsWith("/performance");
+  const isFinanceActive = pathname.startsWith("/finance");
   const isSalesActive = pathname.startsWith("/sales");
 
   return (
@@ -96,17 +102,19 @@ export function AppSidebar() {
                 icon={Users as any}
               />
               <SidebarItem
-                label="Incentive Programs"
+                label="Incentives & Rewards"
                 href="/channel-partners/incentives"
                 active={isClient && pathname === "/channel-partners/incentives"}
                 icon={Gift as any}
               />
-              <SidebarItem
-                label="Incentive Tracker"
-                href="/channel-partners/tracker"
-                active={isClient && pathname === "/channel-partners/tracker"}
-                icon={Trophy as any}
-              />
+              {isSystemAdmin && (
+                <SidebarItem
+                  icon={UserCheck as any}
+                  label="Partner Applications"
+                  href="/partner-applications"
+                  active={isClient && pathname.startsWith("/partner-applications")}
+                />
+              )}
             </SidebarCollapsibleItem>
 
             {/* Stock Inventory */}
@@ -165,6 +173,39 @@ export function AppSidebar() {
               />
             </SidebarCollapsibleItem>
 
+            {/* Finance Management */}
+            <SidebarCollapsibleItem
+              icon={Banknote as any}
+              label="Finance Management"
+              active={isClient && isFinanceActive}
+              defaultOpen={isClient && isFinanceActive}
+            >
+              <SidebarItem
+                label="Finance Overview"
+                href="/finance/overview"
+                active={isClient && pathname === "/finance/overview"}
+                icon={BarChart3 as any}
+              />
+              <SidebarItem
+                label="Invoices"
+                href="/finance/invoices"
+                active={isClient && pathname.startsWith("/finance/invoices")}
+                icon={ReceiptText as any}
+              />
+              <SidebarItem
+                label="SKU Analysis"
+                href="/finance/sku-analysis"
+                active={isClient && pathname.startsWith("/finance/sku-analysis")}
+                icon={Package as any}
+              />
+              <SidebarItem
+                label="Budget & Planning"
+                href="/finance/budget"
+                active={isClient && pathname.startsWith("/finance/budget")}
+                icon={TrendingUp as any}
+              />
+            </SidebarCollapsibleItem>
+
             {/* Sales Management */}
             <SidebarCollapsibleItem
               icon={TrendingUp as any}
@@ -173,22 +214,40 @@ export function AppSidebar() {
               defaultOpen={isClient && isSalesActive}
             >
               <SidebarItem
+                label="Product Catalogue"
+                href="/sales/products"
+                active={isClient && pathname.startsWith("/sales/products")}
+                icon={Package as any}
+              />
+              <SidebarItem
+                label="Price Books"
+                href="/sales/price-books"
+                active={isClient && pathname.startsWith("/sales/price-books")}
+                icon={BookOpen as any}
+              />
+              <SidebarItem
+                label="Opportunities"
+                href="/sales/opportunities"
+                active={isClient && pathname.startsWith("/sales/opportunities")}
+                icon={Target as any}
+              />
+              <SidebarItem
                 label="Quotes"
                 href="/sales/quotes"
                 active={isClient && pathname.startsWith("/sales/quotes")}
                 icon={ReceiptText as any}
               />
               <SidebarItem
+                label="Approvals"
+                href="/sales/approvals"
+                active={isClient && pathname.startsWith("/sales/approvals")}
+                icon={CheckSquare as any}
+              />
+              <SidebarItem
                 label="Orders"
                 href="/sales/orders"
                 active={isClient && pathname.startsWith("/sales/orders")}
                 icon={ShoppingCart as any}
-              />
-              <SidebarItem
-                label="Product Catalogue"
-                href="/sales/products"
-                active={isClient && pathname.startsWith("/sales/products")}
-                icon={Package as any}
               />
             </SidebarCollapsibleItem>
 

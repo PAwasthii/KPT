@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@repo/ui/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@repo/ui/components/ui/card";
 import {
   Dialog,
@@ -19,15 +17,7 @@ import {
 import { Input } from "@repo/ui/components/ui/input";
 import { Label } from "@repo/ui/components/ui/label";
 import { Textarea } from "@repo/ui/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/ui/select";
 import { Badge } from "@repo/ui/components/ui/badge";
-import { Checkbox } from "@repo/ui/components/ui/checkbox";
 import { SearchInput } from "@repo/ui/components/ui/search-input";
 import { DataTable } from "./data-table";
 import { ProductFilter, ProductFilterValues, hasActiveProductFilters } from "./product-filter";
@@ -39,22 +29,13 @@ import {
 import {
   Product,
   ProductCategory,
-  CreateProductInput,
-  UpdateProductInput,
   CreateCategoryInput,
 } from "@/lib/api/types";
 import { toast } from "sonner";
 import {
-  Plus,
-  Edit,
-  Image as ImageIcon,
-  X,
-  Package,
   Tag,
-  Check,
-  ChevronsUpDown,
-  Search,
-  Loader2,
+  Image as ImageIcon,
+  Package,
   ArrowLeft,
 } from "lucide-react";
 
@@ -65,33 +46,14 @@ export function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isViewCategoriesModalOpen, setIsViewCategoriesModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [categorySearchQuery, setCategorySearchQuery] = useState<string>("");
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Filter and search state
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filters, setFilters] = useState<ProductFilterValues>({
     categoryId: undefined,
     active: undefined,
-  });
-
-  const [productForm, setProductForm] = useState<CreateProductInput>({
-    name: "",
-    code: "",
-    price: 0,
-    description: "",
-    categoryId: 0,
-    active: false,
-    component: false
   });
 
   const [categoryForm, setCategoryForm] = useState<CreateCategoryInput>({
@@ -116,15 +78,15 @@ export function ProductManagement() {
         active?: boolean;
         search?: string;
       } = {};
-      
+
       if (filters.categoryId !== undefined) {
         apiFilters.categoryId = filters.categoryId;
       }
-      
+
       if (filters.active !== undefined) {
         apiFilters.active = filters.active;
       }
-      
+
       if (searchQuery.trim()) {
         apiFilters.search = searchQuery.trim();
       }
@@ -142,147 +104,13 @@ export function ProductManagement() {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Debounce search query to avoid too many API calls
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchData();
-    }, searchQuery ? 500 : 0); // 500ms delay for search, immediate for filters
+    }, searchQuery ? 500 : 0);
 
     return () => clearTimeout(timeoutId);
   }, [fetchData]);
-
-  // Close category dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        categoryDropdownRef.current &&
-        !categoryDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsCategoryDropdownOpen(false);
-        setCategorySearchQuery("");
-      }
-    };
-
-    if (isCategoryDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isCategoryDropdownOpen]);
-
-  const handleCreateProduct = () => {
-    setEditingProduct(null);
-    setProductForm({
-      name: "",
-      code: "",
-      price: 0,
-      description: "",
-      categoryId: 0,
-      active: false,
-      component: false
-    });
-    setImagePreview(null);
-    setSelectedImage(null);
-    setCategorySearchQuery("");
-    setIsCategoryDropdownOpen(false);
-    setIsProductModalOpen(true);
-  };
-
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-    setProductForm({
-      name: product.name,
-      code: product.code,
-      price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
-      description: product.description || "",
-      categoryId: product.categoryId,
-      active: product.active,
-      component: product.component
-    });
-    setImagePreview(product.imageUrl || null);
-    setSelectedImage(null);
-    setCategorySearchQuery("");
-    setIsCategoryDropdownOpen(false);
-    setIsProductModalOpen(true);
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (!file) {
-      return;
-    }
-
-    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB (matches backend limit)
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("Product images must be 5MB or smaller.");
-      e.target.value = "";
-      return;
-    }
-
-    setSelectedImage(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleRemoveImage = () => {
-    setSelectedImage(null);
-    setImagePreview(editingProduct?.imageUrl || null);
-  };
-
-  const handleSubmitProduct = async () => {
-    try {
-      if (!productForm.name || !productForm.code || !productForm.categoryId) {
-        toast.error("Please fill in all required fields");
-        return;
-      }
-
-      setIsSubmitting(true);
-      const formData: CreateProductInput | UpdateProductInput = {
-        ...productForm,
-        image: selectedImage || undefined,
-      };
-
-      if (editingProduct) {
-        await productService.updateProduct(editingProduct.id, formData);
-        toast.success("Product updated successfully");
-      } else {
-        await productService.createProduct(formData as CreateProductInput);
-        toast.success("Product created successfully");
-      }
-
-      fetchData();
-      setIsProductModalOpen(false);
-      resetProductForm();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save product");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetProductForm = () => {
-    setProductForm({
-      name: "",
-      code: "",
-      price: 0,
-      description: "",
-      categoryId: categories[0]?.id || 0,
-      active: false,
-      component: false
-    });
-    setEditingProduct(null);
-    setImagePreview(null);
-    setSelectedImage(null);
-    setCategorySearchQuery("");
-    setIsCategoryDropdownOpen(false);
-    setIsSubmitting(false);
-  };
 
   const handleCreateCategory = async () => {
     try {
@@ -312,7 +140,6 @@ export function ProductManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header Actions */}
       <div className="mb-4">
         <Button
           variant="outline"
@@ -323,9 +150,13 @@ export function ProductManagement() {
           Back
         </Button>
       </div>
+
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Product Configuration</h1>
+          <h1 className="text-3xl font-bold">Product Catalogue</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Products are managed in Stock Inventory and synced here automatically.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -342,14 +173,9 @@ export function ProductManagement() {
             <Tag className="h-4 w-4 mr-2" />
             Add Category
           </Button>
-          <Button onClick={handleCreateProduct}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
         </div>
       </div>
 
-      {/* Search */}
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <SearchInput
@@ -361,12 +187,11 @@ export function ProductManagement() {
         </div>
       </div>
 
-      {/* Products Table */}
       {products.length === 0 && !hasActiveProductFilters(filters) ? (
         <Card>
           <CardContent className="text-center py-12 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No products found. Create your first product to get started.</p>
+            <p>No products found. Products are created and managed in Stock Inventory.</p>
           </CardContent>
         </Card>
       ) : (
@@ -417,17 +242,6 @@ export function ProductManagement() {
                 </div>
               ),
             },
-            // {
-            //   key: "price",
-            //   label: "Price",
-            //   render: (value, product) => (
-            //     <span className="text-muted-foreground py-4">
-            //       {product.price != null
-            //         ? `₹${typeof product.price === 'string' ? parseFloat(product.price).toFixed(2) : product.price.toFixed(2)}`
-            //         : <span className="text-gray-400">N/A</span>}
-            //     </span>
-            //   ),
-            // },
             {
               key: "component",
               label: "Type",
@@ -439,7 +253,7 @@ export function ProductManagement() {
                 </div>
               ),
             },
-             {
+            {
               key: "active",
               label: "Status",
               render: (value, product) => (
@@ -484,277 +298,8 @@ export function ProductManagement() {
               }
             />
           }
-          customActions={(product) => (
-            <div className="flex justify-start items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleEditProduct(product)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
         />
       )}
-
-      {/* Product Modal */}
-      <Dialog
-        open={isProductModalOpen}
-        onOpenChange={(open) => {
-          setIsProductModalOpen(open);
-          if (!open) {
-            resetProductForm();
-          }
-        }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? "Edit Product" : "Create Product"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingProduct
-                ? "Update product information"
-                : "Add a new product to the catalog"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Image Upload */}
-            <div className="space-y-2">
-              <Label>Product Image</Label>
-              <div className="flex items-center gap-4">
-                {imagePreview ? (
-                  <div className="relative">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-32 h-32 object-cover rounded border"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute -top-2 -right-2"
-                      onClick={handleRemoveImage}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 border-2 border-dashed rounded flex items-center justify-center">
-                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
-                <div>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="w-48"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    JPG, PNG, WebP (max 5MB)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                Product Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={productForm.name}
-                onChange={(e) =>
-                  setProductForm({ ...productForm, name: e.target.value })
-                }
-                placeholder="Enter product name"
-              />
-            </div>
-
-            {/* Code */}
-            <div className="space-y-2">
-              <Label htmlFor="code">
-                Product Code <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="code"
-                value={productForm.code}
-                onChange={(e) =>
-                  setProductForm({ ...productForm, code: e.target.value })
-                }
-                placeholder="Enter product code"
-              />
-            </div>
-
-            {/* Category - Searchable */}
-            <div className="space-y-2">
-              <Label htmlFor="category">
-                Category <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative" ref={categoryDropdownRef}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={isCategoryDropdownOpen}
-                  className="w-full justify-between"
-                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                >
-                  {productForm.categoryId
-                    ? categories.find((c) => c.id === productForm.categoryId)?.name ||
-                      "Select category..."
-                    : "Select category..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-                {isCategoryDropdownOpen && (
-                  <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md">
-                    <div className="p-2 border-b">
-                      <div className="relative">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search categories..."
-                          value={categorySearchQuery}
-                          onChange={(e) => setCategorySearchQuery(e.target.value)}
-                          className="pl-8"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                    </div>
-                    <div className="max-h-[200px] overflow-y-auto p-1">
-                      {categories
-                        .filter((category) =>
-                          category.name
-                            .toLowerCase()
-                            .includes(categorySearchQuery.toLowerCase())
-                        )
-                        .map((category) => (
-                          <div
-                            key={category.id}
-                            className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${
-                              productForm.categoryId === category.id
-                                ? "bg-accent text-accent-foreground"
-                                : ""
-                            }`}
-                            onClick={() => {
-                              setProductForm({
-                                ...productForm,
-                                categoryId: category.id,
-                              });
-                              setIsCategoryDropdownOpen(false);
-                              setCategorySearchQuery("");
-                            }}
-                          >
-                            <Check
-                              className={`mr-2 h-4 w-4 ${
-                                productForm.categoryId === category.id
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              }`}
-                            />
-                            {category.name}
-                          </div>
-                        ))}
-                      {categories.filter((category) =>
-                        category.name
-                          .toLowerCase()
-                          .includes(categorySearchQuery.toLowerCase())
-                      ).length === 0 && (
-                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                          No categories found.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={productForm.description}
-                onChange={(e) =>
-                  setProductForm({ ...productForm, description: e.target.value })
-                }
-                placeholder="Enter product description"
-                rows={4}
-              />
-            </div>
-
-            {/* Active Status */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="active"
-                checked={productForm.active}
-                onCheckedChange={(checked) =>
-                  setProductForm({ ...productForm, active: checked === true })
-                }
-              />
-              <div className="grid gap-1.5 leading-none">
-                <Label
-                  htmlFor="active"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Active
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Product will be visible in Subdealers only when active
-                </p>
-              </div>
-            </div>
-            {/* Active Status */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="component"
-                checked={productForm.component}
-                onCheckedChange={(checked) =>
-                  setProductForm({ ...productForm, component: checked === true })
-                }
-              />
-              <div className="grid gap-1.5 leading-none">
-                <Label
-                  htmlFor="Component"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Component
-                </Label>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsProductModalOpen(false);
-                resetProductForm();
-              }}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitProduct} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {editingProduct ? "Updating..." : "Creating..."}
-                </>
-              ) : (
-                <>
-                  {editingProduct ? "Update" : "Create"} Product
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Category Modal */}
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>

@@ -30,7 +30,7 @@ function DashboardCardHeader({ title }: { title: string }) {
 export function LeadsGeneratedCard() {
   const { data: leadsData, isLoading, error } = useLeadsGeneratedOverTime({ period: 'week' });
 
-  // Force the Synkro teal line + soft teal fill (design-only; data untouched)
+  // Force KPT teal line + soft teal fill (design-only; data untouched)
   const chartData = leadsData ? {
     ...leadsData,
     datasets: (leadsData.datasets || []).map((dataset: any) => ({

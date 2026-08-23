@@ -445,11 +445,23 @@ export class ApprovalController {
         }
       });
 
+      // Send in-app notification to the requester (fire-and-forget)
+      const actorName = buildFullName(actor?.firstName ?? null, actor?.lastName ?? null);
+      createNotification({
+        userId: approval.createdBy.id,
+        type: newStatus === 'APPROVED' ? 'APPROVAL_APPROVED' : 'APPROVAL_REJECTED',
+        title: `${objectType} ${newStatus === 'APPROVED' ? 'Approved' : 'Rejected'} — ${objectNumber}`,
+        message: `${actorName} has ${newStatus === 'APPROVED' ? 'approved' : 'rejected'} your ${objectType.toLowerCase()} "${objectName}"${comment ? `: ${comment}` : '.'}`,
+        link: approval.targetObjectName === 'OPP'
+          ? `/sales/opportunities/${approval.targetRecordId}`
+          : `/sales/quotes/${approval.targetRecordId}`,
+      }).catch((err) => console.error('[Approval] Failed to create notification:', err));
+
       // Send notification email to requester (fire-and-forget)
       emailService.sendApprovalActionEmail({
         requesterName: buildFullName(approval.createdBy.firstName, approval.createdBy.lastName),
         requesterEmail: approval.createdBy.email,
-        actorName: buildFullName(actor?.firstName ?? null, actor?.lastName ?? null),
+        actorName,
         action: newStatus,
         objectType,
         objectName,

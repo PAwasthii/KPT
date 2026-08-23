@@ -3,12 +3,63 @@ import { prisma } from '@repo/db';
 import { AuditCategory, StockStatus } from '@prisma/client';
 import { handleError, handleValidationError, handleNotFoundError } from '../utils/errorHandler.js';
 import { recordAuditLog } from '../utils/audit.utils.js';
+import { createNotification, notifyAdmins } from './notification.controller.js';
+
+const STOCK_ALERT_LABELS: Record<string, string> = {
+  LOW: 'Low Stock',
+  CRITICAL: 'Critical Stock',
+  OUT_OF_STOCK: 'Out of Stock',
+};
 
 function computeStockStatus(totalQty: number, minStockQty: number): StockStatus {
   if (totalQty === 0) return StockStatus.OUT_OF_STOCK;
   if (totalQty <= 5) return StockStatus.CRITICAL;
   if (totalQty < minStockQty) return StockStatus.LOW;
   return StockStatus.HEALTHY;
+}
+
+/**
+ * Find or create a Product record for a given SKU/productName/category.
+ * Returns the Product's id, or null on failure.
+ */
+async function syncProductRecord(opts: {
+  sku: string;
+  productName: string;
+  category: string;
+  description?: string | null;
+  existingProductId?: number | null;
+}): Promise<number | null> {
+  try {
+    // If we already have a linked product, return it
+    if (opts.existingProductId) return opts.existingProductId;
+
+    // Find existing Product by matching code (SKU)
+    const existing = await prisma.product.findUnique({ where: { code: opts.sku } });
+    if (existing) return existing.id;
+
+    // Find or create ProductCategory by string name (case-insensitive)
+    let cat = await prisma.productCategory.findFirst({
+      where: { name: { equals: opts.category, mode: 'insensitive' } },
+    });
+    if (!cat) {
+      cat = await prisma.productCategory.create({
+        data: { name: opts.category, description: `${opts.category} products` },
+      });
+    }
+
+    const created = await prisma.product.create({
+      data: {
+        code: opts.sku,
+        name: opts.productName,
+        description: opts.description ?? null,
+        categoryId: cat.id,
+        active: true,
+      },
+    });
+    return created.id;
+  } catch {
+    return null;
+  }
 }
 
 export class InventoryController {
@@ -79,6 +130,14 @@ export class InventoryController {
       const minQty = Number(minStockQty ?? 10);
       const stockStatus = computeStockStatus(qty, minQty);
 
+      // Find or create linked Product record (canonical product for Sales flow)
+      const productId = await syncProductRecord({
+        sku: skuTrimmed,
+        productName: String(productName).trim(),
+        category: String(category).trim(),
+        description: description ? String(description).trim() : null,
+      });
+
       const item = await prisma.inventoryItem.create({
         data: {
           productName: String(productName).trim(),
@@ -91,6 +150,7 @@ export class InventoryController {
           unitPrice: Number(unitPrice),
           stockStatus,
           lastUpdated: new Date(),
+          ...(productId ? { productId } : {}),
         },
       });
 
@@ -102,6 +162,25 @@ export class InventoryController {
         newValues: { productName: item.productName, sku: item.sku, totalQty: qty, stockStatus },
         category: AuditCategory.SALES_MANAGEMENT,
       });
+
+      createNotification({
+        userId: req.user!.id,
+        type: 'INVENTORY_CREATED',
+        title: 'Inventory Item Added',
+        message: `"${item.productName}" (SKU: ${item.sku}) added with ${qty} unit(s).`,
+        link: '/stock-inventory',
+      }).catch(() => {});
+
+      if (stockStatus !== StockStatus.HEALTHY) {
+        const label = STOCK_ALERT_LABELS[stockStatus] ?? stockStatus;
+        notifyAdmins({
+          type: stockStatus === StockStatus.OUT_OF_STOCK ? 'INVENTORY_OUT_OF_STOCK'
+            : stockStatus === StockStatus.CRITICAL ? 'INVENTORY_CRITICAL_STOCK' : 'INVENTORY_LOW_STOCK',
+          title: `${label} — ${item.productName}`,
+          message: `Newly added item "${item.productName}" (SKU: ${item.sku}) has only ${qty} unit(s), below minimum threshold.`,
+          link: '/stock-visibility/alerts',
+        }).catch(() => {});
+      }
 
       return res.status(201).json({ success: true, data: item });
     } catch (error) {
@@ -137,31 +216,52 @@ export class InventoryController {
         const qty = Number(raw.totalQty ?? 0);
         const minQty = Number(raw.minStockQty ?? 10);
         const stockStatus = computeStockStatus(qty, minQty);
+        const categoryStr = String(raw.category ?? 'Uncategorized').trim();
 
-        const existing = await prisma.inventoryItem.findUnique({ where: { sku } });
+        const existingInv = await prisma.inventoryItem.findUnique({ where: { sku } });
 
-        if (existing) {
+        if (existingInv) {
           await prisma.inventoryItem.update({
             where: { sku },
             data: {
               productName,
-              category: String(raw.category ?? existing.category).trim(),
-              description: raw.description ? String(raw.description).trim() : existing.description,
+              category: categoryStr,
+              description: raw.description ? String(raw.description).trim() : existingInv.description,
               totalQty: qty,
               minStockQty: minQty,
-              reorderQty: raw.reorderQty !== undefined ? Number(raw.reorderQty) : existing.reorderQty,
-              unitPrice: raw.unitPrice !== undefined ? Number(raw.unitPrice) : existing.unitPrice,
+              reorderQty: raw.reorderQty !== undefined ? Number(raw.reorderQty) : existingInv.reorderQty,
+              unitPrice: raw.unitPrice !== undefined ? Number(raw.unitPrice) : existingInv.unitPrice,
               stockStatus,
               lastUpdated: new Date(),
             },
           });
+
+          // Sync name/category to linked Product
+          if (existingInv.productId) {
+            const productUpdate: any = { name: productName };
+            const cat = await prisma.productCategory.findFirst({
+              where: { name: { equals: categoryStr, mode: 'insensitive' } },
+            });
+            if (cat) productUpdate.categoryId = cat.id;
+            if (raw.description !== undefined) productUpdate.description = raw.description ? String(raw.description).trim() : null;
+            await prisma.product.update({ where: { id: existingInv.productId }, data: productUpdate }).catch(() => {});
+          }
+
           updated++;
         } else {
+          // New item: find or create Product
+          const productId = await syncProductRecord({
+            sku,
+            productName,
+            category: categoryStr,
+            description: raw.description ? String(raw.description).trim() : null,
+          });
+
           await prisma.inventoryItem.create({
             data: {
               productName,
               sku,
-              category: String(raw.category ?? 'Uncategorized').trim(),
+              category: categoryStr,
               description: raw.description ? String(raw.description).trim() : null,
               totalQty: qty,
               minStockQty: minQty,
@@ -169,6 +269,7 @@ export class InventoryController {
               unitPrice: raw.unitPrice !== undefined ? Number(raw.unitPrice) : 0,
               stockStatus,
               lastUpdated: new Date(),
+              ...(productId ? { productId } : {}),
             },
           });
           created++;
@@ -183,6 +284,18 @@ export class InventoryController {
         newValues: { created, updated, errors: errors.length },
         category: AuditCategory.SALES_MANAGEMENT,
       });
+
+      const allFailed = created === 0 && updated === 0 && errors.length > 0;
+      const hasErrors = errors.length > 0;
+      createNotification({
+        userId: req.user!.id,
+        type: 'INVENTORY_BULK_IMPORT',
+        title: allFailed ? 'Bulk Import Failed' : hasErrors ? 'Bulk Import Completed with Errors' : 'Bulk Import Successful',
+        message: allFailed
+          ? `All ${errors.length} row(s) failed to import. Please check the file and try again.`
+          : `${created} item(s) added, ${updated} item(s) updated${hasErrors ? `, ${errors.length} row(s) skipped` : ''}.`,
+        link: '/stock-inventory',
+      }).catch(() => {});
 
       return res.status(201).json({ success: true, created, updated, errors });
     } catch (error) {
@@ -224,6 +337,31 @@ export class InventoryController {
         },
       });
 
+      // Sync changes to linked Product (non-fatal)
+      if (updated.productId) {
+        const productUpdate: any = {};
+        if (productName !== undefined) productUpdate.name = String(productName).trim();
+        if (description !== undefined) productUpdate.description = description ? String(description).trim() : null;
+        if (sku !== undefined && sku !== existing.sku) productUpdate.code = String(sku).trim();
+
+        if (category !== undefined) {
+          const catStr = String(category).trim();
+          let cat = await prisma.productCategory.findFirst({
+            where: { name: { equals: catStr, mode: 'insensitive' } },
+          });
+          if (!cat) {
+            cat = await prisma.productCategory.create({
+              data: { name: catStr, description: `${catStr} products` },
+            });
+          }
+          productUpdate.categoryId = cat.id;
+        }
+
+        if (Object.keys(productUpdate).length > 0) {
+          await prisma.product.update({ where: { id: updated.productId }, data: productUpdate }).catch(() => {});
+        }
+      }
+
       await recordAuditLog({
         action: 'INVENTORY_UPDATED',
         changedBy: req.user!.id,
@@ -233,6 +371,17 @@ export class InventoryController {
         newValues: { totalQty: newQty, stockStatus },
         category: AuditCategory.SALES_MANAGEMENT,
       });
+
+      if (stockStatus !== StockStatus.HEALTHY && stockStatus !== existing.stockStatus) {
+        const label = STOCK_ALERT_LABELS[stockStatus] ?? stockStatus;
+        notifyAdmins({
+          type: stockStatus === StockStatus.OUT_OF_STOCK ? 'INVENTORY_OUT_OF_STOCK'
+            : stockStatus === StockStatus.CRITICAL ? 'INVENTORY_CRITICAL_STOCK' : 'INVENTORY_LOW_STOCK',
+          title: `${label} Alert — ${existing.productName}`,
+          message: `"${existing.productName}" (SKU: ${existing.sku}) now has ${newQty} unit(s) remaining.`,
+          link: '/stock-visibility/alerts',
+        }).catch(() => {});
+      }
 
       return res.json({ success: true, data: updated });
     } catch (error) {
@@ -250,6 +399,34 @@ export class InventoryController {
       const existing = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
       if (!existing) {
         return handleNotFoundError(res, 'Inventory item', 'Delete inventory item');
+      }
+
+      // Handle linked Product before deleting InventoryItem
+      if (existing.productId) {
+        const [pbeCount, oliCount, qliCount, soliCount] = await Promise.all([
+          prisma.priceBookEntry.count({ where: { productId: existing.productId } }),
+          prisma.opportunityLineItem.count({ where: { productId: existing.productId } }),
+          prisma.quoteLineItem.count({ where: { productId: existing.productId } }),
+          prisma.salesOrderLineItem.count({ where: { productId: existing.productId } }),
+        ]);
+
+        const hasDownstreamRefs = pbeCount + oliCount + qliCount + soliCount > 0;
+
+        if (hasDownstreamRefs) {
+          // Deactivate Product to prevent it appearing in new transactions
+          await prisma.product.update({
+            where: { id: existing.productId },
+            data: { active: false },
+          }).catch(() => {});
+        } else {
+          // No downstream refs — safe to delete the Product too
+          // First null the FK so InventoryItem can be deleted
+          await prisma.inventoryItem.update({
+            where: { id: itemId },
+            data: { productId: null },
+          }).catch(() => {});
+          await prisma.product.delete({ where: { id: existing.productId } }).catch(() => {});
+        }
       }
 
       await prisma.inventoryItem.delete({ where: { id: itemId } });

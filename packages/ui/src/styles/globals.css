@@ -30,91 +30,89 @@
 	--brand-navy: #0D1B45;         /* KPT Navy — sidebar base */
 	--brand-kpt-blue: #1A4FA3;     /* KPT Corporate Blue */
 	--brand-kpt-blue-light: #EEF3FF; /* Blue pale tint */
-	/* Legacy aliases so existing Tailwind utilities keep working */
-	--brand-indigo: #2c2c2c;
-	--brand-teal: #e8651a;
-	--brand-turquoise: #c4521a;
-	--brand-mint: #fef3eb;
-	--brand-pale-aqua: #fef3eb;
-	--brand-lavender: #f5f5f5;
+	/* Legacy aliases — remapped to blue-gray theme */
+	--brand-indigo: #1e40af;
+	--brand-teal: #2563EB;
+	--brand-turquoise: #1D4ED8;
+	--brand-mint: #E0E7FF;
+	--brand-pale-aqua: #EFF6FF;
+	--brand-lavender: #F1F5F9;
 	--brand-sky: #3b82f6;
 	--brand-lime: #22c55e;
 }
 
 :root {
-	--background: #F5F7FB;
-	--foreground: #2c2c2c;
+	--background: #F1F5F9;
+	--foreground: #0F172A;
 	--card: #ffffff;
-	--card-foreground: #2c2c2c;
+	--card-foreground: #0F172A;
 	--popover: #ffffff;
-	--popover-foreground: #2c2c2c;
-	--primary: #e8651a; /* KPT Orange — primary actions / CTAs / buttons */
+	--popover-foreground: #0F172A;
+	--primary: #2563EB;
 	--primary-foreground: #ffffff;
-	--secondary: #EEF3FF;
-	--secondary-foreground: #0D1B45;
-	--muted: #EFF4FF;
-	--muted-foreground: #6b7280;
-	--accent: #fef3eb; /* Orange Pale — hover / subtle accent surfaces */
-	--accent-foreground: #2c2c2c;
-	--destructive: hsl(0 84.2% 60.2%);
-	--destructive-foreground: hsl(0 0% 98%);
-	--border: #e0e0e0;
-	--input: #e0e0e0;
-	--ring: #e8651a; /* KPT Orange focus ring */
-	--chart-1: #e8651a; /* KPT Orange */
-	--chart-2: #2c2c2c; /* Charcoal */
-	--chart-3: #f59e0b; /* Amber */
-	--chart-4: #3b82f6; /* Blue */
-	--chart-5: #8b5cf6; /* Purple */
-	--radius: 0.6rem;
-	--navbar: #1e1e1e;
-	/* Sidebar — dark charcoal rail with white text and orange active state */
-	--sidebar: #1e1e1e;
-	--sidebar-foreground: #f5f5f5;
-	--sidebar-primary: #e8651a; /* KPT Orange — active item */
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #2c2c2c; /* hover */
-	--sidebar-accent-foreground: #ffffff;
-	--sidebar-border: #333333;
-	--sidebar-ring: #e8651a;
-	--sidebar-gradient: linear-gradient(180deg, #1e1e1e 0%, #1e1e1e 80%, #2c1a0e 95%, #e8651a 100%);
+	--secondary: #E0E7FF;
+	--secondary-foreground: #1e40af;
+	--muted: #F8FAFC;
+	--muted-foreground: #64748B;
+	--accent: #EEF2FF;
+	--accent-foreground: #1e40af;
+	--destructive: #EF4444;
+	--destructive-foreground: #ffffff;
+	--border: #E2E8F0;
+	--input: #E2E8F0;
+	--ring: #2563EB;
+	--chart-1: #2563EB;
+	--chart-2: #0F172A;
+	--chart-3: #F59E0B;
+	--chart-4: #10B981;
+	--chart-5: #8B5CF6;
+	--radius: 0.75rem;
+	--navbar: #ffffff;
+	/* Sidebar — clean white with cool blue-gray active states */
+	--sidebar: #ffffff;
+	--sidebar-foreground: #475569;
+	--sidebar-primary: #EFF6FF;
+	--sidebar-primary-foreground: #1D4ED8;
+	--sidebar-accent: #F1F5F9;
+	--sidebar-accent-foreground: #0F172A;
+	--sidebar-border: #E2E8F0;
+	--sidebar-ring: #2563EB;
 }
 
 .dark {
-	--background: #141414;
-	--foreground: #f5f5f5;
-	--card: #1e1e1e;
-	--card-foreground: #f5f5f5;
-	--popover: #1e1e1e;
-	--popover-foreground: #f5f5f5;
-	--primary: #f97316;
+	--background: #0F172A;
+	--foreground: #F8FAFC;
+	--card: #1E293B;
+	--card-foreground: #F8FAFC;
+	--popover: #1E293B;
+	--popover-foreground: #F8FAFC;
+	--primary: #3B82F6;
 	--primary-foreground: #ffffff;
-	--secondary: #2c2c2c;
-	--secondary-foreground: #f5f5f5;
-	--muted: #2c2c2c;
-	--muted-foreground: #9ca3af;
-	--accent: #3d2010;
-	--accent-foreground: #f5f5f5;
-	--destructive: hsl(0 62.8% 45%);
-	--destructive-foreground: hsl(0 0% 98%);
-	--border: #333333;
-	--input: #333333;
-	--ring: #e8651a;
-	--chart-1: #f97316;
-	--chart-2: #f59e0b;
-	--chart-3: #22c55e;
-	--chart-4: #3b82f6;
-	--chart-5: #8b5cf6;
-	--navbar: #141414;
-	--sidebar: #1e1e1e;
-	--sidebar-foreground: #f5f5f5;
-	--sidebar-primary: #e8651a;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #2c2c2c;
-	--sidebar-accent-foreground: #f5f5f5;
-	--sidebar-border: #333333;
-	--sidebar-ring: #e8651a;
-	--sidebar-gradient: linear-gradient(180deg, #1e1e1e 0%, #1e1e1e 80%, #2c1a0e 95%, #e8651a 100%);
+	--secondary: #1E3A5F;
+	--secondary-foreground: #BFDBFE;
+	--muted: #1E293B;
+	--muted-foreground: #94A3B8;
+	--accent: #1E3A5F;
+	--accent-foreground: #BFDBFE;
+	--destructive: #EF4444;
+	--destructive-foreground: #ffffff;
+	--border: #334155;
+	--input: #334155;
+	--ring: #3B82F6;
+	--chart-1: #3B82F6;
+	--chart-2: #F59E0B;
+	--chart-3: #10B981;
+	--chart-4: #8B5CF6;
+	--chart-5: #F97316;
+	--navbar: #1E293B;
+	--sidebar: #1E293B;
+	--sidebar-foreground: #94A3B8;
+	--sidebar-primary: #1E3A5F;
+	--sidebar-primary-foreground: #93C5FD;
+	--sidebar-accent: #0F172A;
+	--sidebar-accent-foreground: #F8FAFC;
+	--sidebar-border: #334155;
+	--sidebar-ring: #3B82F6;
 }
 
 @theme inline {
@@ -192,7 +190,7 @@
 		font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 	}
 
-	/* Synkro type pairing: Plus Jakarta Sans for headings, Inter for body */
+	/* KPT type pairing: Plus Jakarta Sans for headings, Inter for body */
 	h1,
 	h2,
 	h3,
@@ -210,31 +208,30 @@
 }
 
 /* -------------------------------------------------------------------------
-   KPT sidebar theming — dark charcoal rail with KPT orange active state.
+   KPT sidebar theming — clean white rail with blue active states.
    ------------------------------------------------------------------------- */
-.synkro-sidebar {
-	background-color: #1E1E1E !important;
-	background-image: linear-gradient(180deg, #1E1E1E 0%, #1E1E1E 80%, #2C1A0E 95%, #E8651A 100%);
+.kpt-sidebar {
+	background-color: var(--sidebar) !important;
 	color: var(--sidebar-foreground);
 	border-color: var(--sidebar-border) !important;
 }
-.synkro-sidebar a,
-.synkro-sidebar button,
-.synkro-sidebar p,
-.synkro-sidebar span,
-.synkro-sidebar h4 {
+.kpt-sidebar a,
+.kpt-sidebar button,
+.kpt-sidebar p,
+.kpt-sidebar span,
+.kpt-sidebar h4 {
 	color: var(--sidebar-foreground);
 }
-.synkro-sidebar .sidebar-muted {
+.kpt-sidebar .sidebar-muted {
 	color: color-mix(in srgb, var(--sidebar-foreground) 55%, transparent);
 }
-.synkro-sidebar a:hover,
-.synkro-sidebar button:hover {
+.kpt-sidebar a:hover,
+.kpt-sidebar button:hover {
 	background-color: var(--sidebar-accent);
 }
-.synkro-sidebar a.sidebar-active,
-.synkro-sidebar button.sidebar-active,
-.synkro-sidebar .bg-sidebar-primary {
+.kpt-sidebar a.sidebar-active,
+.kpt-sidebar button.sidebar-active,
+.kpt-sidebar .bg-sidebar-primary {
 	background-color: var(--sidebar-primary) !important;
 	color: var(--sidebar-primary-foreground) !important;
 }
@@ -260,7 +257,7 @@
 		transition: box-shadow 0.25s ease;
 	}
 	[data-slot="card"]:hover {
-		box-shadow: 0 4px 24px -4px rgba(13, 27, 69, 0.1), 0 2px 8px -2px rgba(13, 27, 69, 0.05);
+		box-shadow: 0 4px 20px -4px rgba(37, 99, 235, 0.08), 0 2px 8px -2px rgba(37, 99, 235, 0.04);
 	}
 	/* Table row smooth highlight */
 	tbody tr {

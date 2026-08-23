@@ -1,17 +1,20 @@
 /**
- * Email Service using Plunk
- * Handles transactional email sending for user creation, password resets, etc.
+ * Email Service — Resend primary, SMTP fallback (Nodemailer)
+ * Set SMTP_HOST + SMTP_USER + SMTP_PASS in .env to enable SMTP delivery.
+ * SMTP takes priority over Resend when both are configured.
  */
+import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-interface PlunkEmailOptions {
+interface EmailOptions {
   to: string;
   subject: string;
-  body: string;
-  name?: string;
+  html?: string;
+  text?: string;
   replyTo?: string;
   cc?: string[];
   bcc?: string[];
-  attachments?: Record<string, { content: string; mime: string }>;
+  attachments?: Array<{ filename: string; content: string | Buffer }>;
 }
 
 interface UserCreationEmailData {
@@ -22,28 +25,51 @@ interface UserCreationEmailData {
 }
 
 class EmailService {
-  private apiKey: string;
+  private resend: Resend | null = null;
   private fromEmail: string;
   private fromName: string;
-  private apiUrl = 'https://api.useplunk.com/v1/send';
+  private smtpTransport: nodemailer.Transporter | null = null;
+  private smtpFrom: string = '';
 
   constructor() {
-    this.apiKey = process.env.PLUNK_API_KEY || '';
-    this.fromEmail = process.env.PLUNK_FROM_EMAIL || '';
-    this.fromName = process.env.PLUNK_FROM_NAME || 'CRM System';
+    const apiKey = process.env.RESEND_API_KEY;
+    this.fromEmail = process.env.RESEND_FROM_EMAIL || '';
+    this.fromName = 'KPT Partner Portal';
 
-    if (!this.apiKey) {
-      console.warn('PLUNK_API_KEY is not set in environment variables');
+    // ── SMTP setup (takes priority if configured) ──────────────────────────────
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+    const smtpFrom = process.env.SMTP_FROM || smtpUser || '';
+
+    if (smtpHost && smtpUser && smtpPass) {
+      this.smtpTransport = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+      this.smtpFrom = `${this.fromName} <${smtpFrom}>`;
+      console.log('[EmailService] SMTP configured:', { host: smtpHost, port: smtpPort, user: smtpUser });
+    } else {
+      console.log('[EmailService] SMTP not configured (SMTP_HOST/SMTP_USER/SMTP_PASS missing)');
     }
-    if (!this.fromEmail) {
-      console.warn('PLUNK_FROM_EMAIL is not set in environment variables');
+
+    // ── Resend setup (used when SMTP not configured) ───────────────────────────
+    if (!smtpHost) {
+      if (!apiKey) {
+        console.warn('[EmailService] RESEND_API_KEY is not set — emails will not be delivered');
+      } else {
+        this.resend = new Resend(apiKey);
+      }
+
+      if (!this.fromEmail) {
+        console.warn('[EmailService] RESEND_FROM_EMAIL is not set — emails will not be delivered');
+      }
     }
-    console.log('Email service initialized:', {
-      hasApiKey: !!this.apiKey,
-      apiKeyLength: this.apiKey?.length,
-      fromEmail: this.fromEmail,
-      fromName: this.fromName,
-    });
+
+    console.log('[EmailService] Active transport:', this.smtpTransport ? 'SMTP' : (this.resend ? 'Resend' : 'NONE'));
   }
 
   private escapeHtml(input: string): string {
@@ -56,25 +82,13 @@ class EmailService {
   }
 
   /**
-   * Get company logo URL
-   */
-
-
-  /**
    * Generate branded email template wrapper
-   * Matches Stanley Black & Decker Custom Marketing CRM Suite website theme
-   * Uses email-compatible CSS with inline styles
    */
   private generateBrandedEmailTemplate(title: string, content: string, isPasswordReset: boolean = false): string {
-   
-    const companyName = 'Stanley Black & Decker';
-    // Convert HSL to RGB for better email client support
-    const headerBgColor = isPasswordReset ? '#3b82f6' : '#facc15'; // Blue or Yellow
-    const headerTextColor = '#1a1a1a'; // Dark text
-    const accentColor = isPasswordReset ? '#3b82f6' : '#facc15';
-    const accentColorDark = isPasswordReset ? '#2563eb' : '#eab308';
-    const boxBgColor = isPasswordReset ? '#dbeafe' : '#fef9c3'; // Light blue or light yellow
-    
+    const companyName = 'KPT — Kulkarni Power Tools';
+    const headerBgColor = isPasswordReset ? '#3b82f6' : '#facc15';
+    const headerTextColor = '#1a1a1a';
+
     return `
       <!DOCTYPE html>
       <html lang="en">
@@ -125,95 +139,101 @@ class EmailService {
   }
 
   /**
-   * Send a generic email using Plunk
+   * Send a transactional email.
+   * Uses SMTP (Nodemailer) when SMTP_HOST/SMTP_USER/SMTP_PASS are set in .env,
+   * otherwise falls back to Resend. Returns true only on confirmed delivery.
    */
-  async sendEmail(options: PlunkEmailOptions): Promise<boolean> {
-    if (!this.apiKey) {
-      console.error('Email service not configured: Missing PLUNK_API_KEY');
+  async sendEmail(options: EmailOptions): Promise<boolean> {
+    // ── SMTP path ──────────────────────────────────────────────────────────────
+    if (this.smtpTransport) {
+      try {
+        console.log('[EmailService] Sending email via SMTP:', { to: options.to, subject: options.subject });
+        await this.smtpTransport.sendMail({
+          from: this.smtpFrom,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          text: options.text,
+          replyTo: options.replyTo,
+          cc: options.cc,
+          bcc: options.bcc,
+        });
+        console.log('[EmailService] SMTP delivery accepted for:', options.to);
+        return true;
+      } catch (err) {
+        console.error('[EmailService] SMTP delivery failed:', err instanceof Error ? err.message : 'Unknown error');
+        return false;
+      }
+    }
+
+    // ── Resend path ────────────────────────────────────────────────────────────
+    if (!this.resend) {
+      console.error('[EmailService] Cannot send email: RESEND_API_KEY is not configured.');
       return false;
     }
 
     if (!this.fromEmail) {
-      console.error('Email service not configured: Missing PLUNK_FROM_EMAIL');
+      console.error('[EmailService] Cannot send email: RESEND_FROM_EMAIL is not configured.');
       return false;
     }
 
-    const useCustomFrom = process.env.PLUNK_USE_CUSTOM_FROM === 'true';
+    const from = `${this.fromName} <${this.fromEmail}>`;
 
-    const payload: any = {
+    console.log('[EmailService] Sending email via Resend:', {
       to: options.to,
       subject: options.subject,
-      body: options.body,
-      subscribed: false,
-      // Plunk: name/from/reply are optional overrides; omit if not defined/verified
-      name: options.name || this.fromName || undefined,
-      from: useCustomFrom ? this.fromEmail : undefined,
-      reply: useCustomFrom ? (options.replyTo || this.fromEmail) : (options.replyTo || undefined),
-      // CC and BCC support (Plunk transactional API)
-      cc: options.cc && options.cc.length > 0 ? options.cc : undefined,
-      bcc: options.bcc && options.bcc.length > 0 ? options.bcc : undefined,
-    };
-
-    // Remove undefined optional fields to avoid API rejection
-    Object.keys(payload).forEach((k) => {
-      if (payload[k] === undefined) delete payload[k];
-    });
-
-    if (options.attachments && Object.keys(options.attachments).length > 0) {
-      // Plunk expects attachments as an array of { filename, content, contentType }
-      payload.attachments = Object.entries(options.attachments).map(([filename, meta]) => ({
-        filename,
-        content: meta.content,
-        contentType: meta.mime,
-      }));
-    }
-
-    console.log('Sending email with Plunk:', {
-      to: options.to,
-      subject: options.subject,
-      from: this.fromEmail,
-      hasApiKey: !!this.apiKey,
+      from,
     });
 
     try {
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const payload: Record<string, unknown> = {
+        from,
+        to: options.to,
+        subject: options.subject,
+      };
+      if (options.html) payload.html = options.html;
+      if (options.text) payload.text = options.text;
+      if (options.replyTo) payload.reply_to = options.replyTo;
+      if (options.cc && options.cc.length > 0) payload.cc = options.cc;
+      if (options.bcc && options.bcc.length > 0) payload.bcc = options.bcc;
+      if (options.attachments && options.attachments.length > 0) payload.attachments = options.attachments;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Plunk API error:', errorData);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await this.resend.emails.send(payload as any);
+
+      if (error) {
+        console.error('[EmailService] Resend delivery error:', {
+          name: error.name,
+          statusCode: (error as any).statusCode,
+          message: error.message,
+        });
+        if (error.message?.toLowerCase().includes('domain') || error.message?.toLowerCase().includes('verified')) {
+          console.error('[EmailService] *** Resend domain not verified. Fix: set SMTP_HOST+SMTP_USER+SMTP_PASS in .env, OR verify the domain at https://resend.com/domains ***');
+        }
         return false;
       }
 
-      const data = await response.json();
-      console.log('Email sent successfully:', data);
+      console.log('[EmailService] Email accepted by Resend, id:', data?.id);
       return true;
-    } catch (error) {
-      console.error('Error sending email:', error);
+    } catch (err) {
+      console.error('[EmailService] Unexpected error sending email via Resend:', err instanceof Error ? err.message : 'Unknown error');
       return false;
     }
   }
 
   /**
    * Send user creation email with Account ID & Password
-   * Matches Stanley Black & Decker Custom Marketing CRM Suite theme
    */
   async sendUserCreationEmail(data: UserCreationEmailData): Promise<boolean> {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const subject = 'Welcome to Stanley Black & Decker CRM - Your Account Details';
+    const subject = 'Welcome to KPT CRM - Your Account Details';
 
     const content = `
-      <h1 style="margin:0 0 24px 0;font-size:32px;font-weight:bold;color:#facc15;text-align:center;font-family:Arial,Helvetica,sans-serif;">Welcome to Stanley Black & Decker!</h1>
-      
+      <h1 style="margin:0 0 24px 0;font-size:32px;font-weight:bold;color:#2563EB;text-align:center;font-family:Arial,Helvetica,sans-serif;">Welcome to KPT CRM!</h1>
+
       <p style="margin:0 0 16px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Hi <strong style="color:#1a1a1a;">${this.escapeHtml(data.name)}</strong>,</p>
-      
-      <p style="margin:0 0 30px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Your account has been successfully created by the system administrator. You can now access the Stanley Black & Decker Custom Marketing CRM Suite with the following credentials:</p>
+
+      <p style="margin:0 0 30px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Your account has been successfully created by the system administrator. You can now access the KPT CRM with the following credentials:</p>
 
       <!-- Credentials Box -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fef9c3;border:2px solid #facc15;margin:30px 0;">
@@ -287,34 +307,27 @@ class EmailService {
         <tr>
           <td style="padding-top:32px;">
             <p style="margin:0 0 8px 0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">If you have any questions or need assistance, please contact your system administrator.</p>
-            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black & Decker Team</strong></p>
+            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT CRM Team</strong></p>
           </td>
         </tr>
       </table>
     `;
 
-    const body = this.generateBrandedEmailTemplate('Welcome to Custom Marketing CRM Suite', content, false);
-
-    return await this.sendEmail({
-      to: data.email,
-      subject,
-      body,
-      name: data.name,
-    });
+    const html = this.generateBrandedEmailTemplate('Welcome to KPT CRM', content, false);
+    return this.sendEmail({ to: data.email, subject, html });
   }
 
   /**
    * Send password reset OTP email
-   * Matches Stanley Black & Decker Custom Marketing CRM Suite theme
    */
   async sendPasswordResetOtpEmail(email: string, name: string, otp: string): Promise<boolean> {
-    const subject = 'Password Reset OTP - Stanley Black & Decker CRM';
+    const subject = 'Password Reset OTP - KPT CRM';
 
     const content = `
       <h1 style="margin:0 0 24px 0;font-size:32px;font-weight:bold;color:#3b82f6;text-align:center;font-family:Arial,Helvetica,sans-serif;">Password Reset Verification Code</h1>
-      
+
       <p style="margin:0 0 16px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Hi <strong style="color:#1a1a1a;">${this.escapeHtml(name)}</strong>,</p>
-      
+
       <p style="margin:0 0 30px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">We received a request to reset your password. Please use the verification code below to proceed:</p>
 
       <!-- OTP Box -->
@@ -355,35 +368,28 @@ class EmailService {
         <tr>
           <td style="padding-top:32px;">
             <p style="margin:0 0 8px 0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">If you have any questions or need assistance, please contact your system administrator.</p>
-            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black & Decker Team</strong></p>
+            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Team</strong></p>
           </td>
         </tr>
       </table>
     `;
 
-    const body = this.generateBrandedEmailTemplate('Password Reset OTP', content, true);
-
-    return await this.sendEmail({
-      to: email,
-      subject,
-      body,
-      name,
-    });
+    const html = this.generateBrandedEmailTemplate('Password Reset OTP', content, true);
+    return this.sendEmail({ to: email, subject, html });
   }
 
   /**
    * Send lead assignment notification email
-   * Matches Stanley Black & Decker Custom Marketing CRM Suite theme
    */
   async sendLeadAssignmentNotificationEmail(email: string, name: string, leadCount: number): Promise<boolean> {
-    const portalUrl = 'https://stanleyblackanddeckerindia.com/login';
-    const subject = 'New Leads Assigned to You - Stanley Black & Decker CRM';
+    const portalUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+    const subject = 'New Leads Assigned to You - KPT CRM';
 
     const content = `
       <h1 style="margin:0 0 24px 0;font-size:32px;font-weight:bold;color:#facc15;text-align:center;font-family:Arial,Helvetica,sans-serif;">New Leads Assigned to You</h1>
-      
+
       <p style="margin:0 0 16px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Hi <strong style="color:#1a1a1a;">${this.escapeHtml(name)}</strong>,</p>
-      
+
       <p style="margin:0 0 30px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">You have been assigned ${leadCount} new lead${leadCount > 1 ? 's' : ''} in the CRM system.</p>
 
       <!-- Lead Count Box -->
@@ -417,35 +423,28 @@ class EmailService {
         <tr>
           <td style="padding-top:32px;">
             <p style="margin:0 0 8px 0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">If you have any questions or need assistance, please contact your system administrator.</p>
-            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black & Decker Team</strong></p>
+            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Team</strong></p>
           </td>
         </tr>
       </table>
     `;
 
-    const body = this.generateBrandedEmailTemplate('New Leads Assigned to You', content, false);
-
-    return await this.sendEmail({
-      to: email,
-      subject,
-      body,
-      name,
-    });
+    const html = this.generateBrandedEmailTemplate('New Leads Assigned to You', content, false);
+    return this.sendEmail({ to: email, subject, html });
   }
 
   /**
    * Send password reset email with reset token link
-   * Matches Stanley Black & Decker Custom Marketing CRM Suite theme
    */
   async sendPasswordResetEmail(email: string, name: string, resetToken: string): Promise<boolean> {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-    const subject = 'Password Reset Request - Stanley Black & Decker CRM';
+    const subject = 'Password Reset Request - KPT CRM';
 
     const content = `
       <h1 style="margin:0 0 24px 0;font-size:32px;font-weight:bold;color:#3b82f6;text-align:center;font-family:Arial,Helvetica,sans-serif;">Password Reset Request</h1>
-      
+
       <p style="margin:0 0 16px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Hi <strong style="color:#1a1a1a;">${this.escapeHtml(name)}</strong>,</p>
-      
+
       <p style="margin:0 0 30px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">We received a request to reset your password. Click the button below to create a new password:</p>
 
       <!-- Button -->
@@ -490,20 +489,14 @@ class EmailService {
         <tr>
           <td style="padding-top:32px;">
             <p style="margin:0 0 8px 0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">If you have any questions or need assistance, please contact your system administrator.</p>
-            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black & Decker Team</strong></p>
+            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Team</strong></p>
           </td>
         </tr>
       </table>
     `;
 
-    const body = this.generateBrandedEmailTemplate('Password Reset Request', content, true);
-
-    return await this.sendEmail({
-      to: email,
-      subject,
-      body,
-      name,
-    });
+    const html = this.generateBrandedEmailTemplate('Password Reset Request', content, true);
+    return this.sendEmail({ to: email, subject, html });
   }
 
   /**
@@ -556,20 +549,14 @@ class EmailService {
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <td style="padding-top:32px;">
-            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black & Decker Team</strong></p>
+            <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Team</strong></p>
           </td>
         </tr>
       </table>
     `;
 
-    const body = this.generateBrandedEmailTemplate('Aakraman Login OTP', content, false);
-
-    return await this.sendEmail({
-      to: email,
-      subject,
-      body,
-      name,
-    });
+    const html = this.generateBrandedEmailTemplate('Aakraman Login OTP', content, false);
+    return this.sendEmail({ to: email, subject, html });
   }
 
   /**
@@ -637,11 +624,11 @@ class EmailService {
 
       <p style="margin:24px 0 8px 0;font-size:15px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Please log in to the CRM to review and take action on this request (Approval ID: <strong style="color:#1a1a1a;">#${data.approvalId}</strong>).</p>
 
-      <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black &amp; Decker Team</strong></p>
+      <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Team</strong></p>
     `;
 
-    const body = this.generateBrandedEmailTemplate('Approval Request', content, false);
-    return await this.sendEmail({ to: data.approverEmail, subject, body, name: data.approverName });
+    const html = this.generateBrandedEmailTemplate('Approval Request', content, false);
+    return this.sendEmail({ to: data.approverEmail, subject, html });
   }
 
   /**
@@ -724,11 +711,11 @@ class EmailService {
         </tr>
       </table>
 
-      <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black &amp; Decker Team</strong></p>
+      <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Team</strong></p>
     `;
 
-    const body = this.generateBrandedEmailTemplate(`${data.objectType} ${isApproved ? 'Approved' : 'Rejected'}`, content, isApproved);
-    return await this.sendEmail({ to: data.requesterEmail, subject, body, name: data.requesterName });
+    const html = this.generateBrandedEmailTemplate(`${data.objectType} ${isApproved ? 'Approved' : 'Rejected'}`, content, isApproved);
+    return this.sendEmail({ to: data.requesterEmail, subject, html });
   }
 
   /**
@@ -765,7 +752,7 @@ class EmailService {
       }>;
     };
   }): Promise<boolean> {
-    const subject = data.subject || `Quote ${data.quote.quoteNumber} from Stanley Black & Decker`;
+    const subject = data.subject || `Quote ${data.quote.quoteNumber} from KPT`;
 
     const lineItemRows = data.quote.lineItems.map((item, i) => `
       <tr style="background-color:${i % 2 === 0 ? '#ffffff' : '#f9fafb'};">
@@ -866,18 +853,66 @@ class EmailService {
         </tr>
       </table>
 
-      <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">Stanley Black &amp; Decker Team</strong></p>
+      <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Team</strong></p>
     `;
 
-    const body = this.generateBrandedEmailTemplate(`Quote ${data.quote.quoteNumber}`, content, false);
-    return await this.sendEmail({
+    const html = this.generateBrandedEmailTemplate(`Quote ${data.quote.quoteNumber}`, content, false);
+    return this.sendEmail({
       to: data.to,
       subject,
-      body,
-      name: data.contactName,
+      html,
       cc: data.cc,
       bcc: data.bcc,
     });
+  }
+
+  /**
+   * Send login OTP email (Email OTP authentication)
+   * KPT Partner Portal branded — blue theme, 10-minute expiry
+   */
+  async sendLoginOtpEmail(email: string, name: string, otp: string): Promise<boolean> {
+    const subject = 'Your KPT Partner Portal verification code';
+
+    const content = `
+      <h1 style="margin:0 0 24px 0;font-size:28px;font-weight:bold;color:#3b82f6;text-align:center;font-family:Arial,Helvetica,sans-serif;">Your KPT Partner Portal verification code</h1>
+
+      <p style="margin:0 0 16px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Hi ${name ? `<strong style="color:#1a1a1a;">${this.escapeHtml(name)}</strong>` : 'there'},</p>
+
+      <p style="margin:0 0 30px 0;font-size:16px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Use the code below to sign in to the KPT Partner Portal. This code expires in <strong>10 minutes</strong>.</p>
+
+      <!-- OTP Box -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#dbeafe;border:3px solid #3b82f6;margin:30px 0;">
+        <tr><td style="padding:4px;background-color:#3b82f6;"></td></tr>
+        <tr>
+          <td align="center" style="padding:40px 30px;">
+            <p style="margin:0 0 12px 0;font-size:14px;color:#737373;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">Your one-time verification code:</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="font-family:'Courier New',monospace;font-size:42px;font-weight:bold;letter-spacing:12px;color:#1a1a1a;background-color:#ffffff;padding:24px 40px;border:2px solid #3b82f6;">${this.escapeHtml(otp)}</td>
+              </tr>
+            </table>
+            <p style="margin:20px 0 0 0;font-size:13px;color:#737373;font-weight:600;font-family:Arial,Helvetica,sans-serif;">Expires in 10 minutes</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Security Notice -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f9f9f9;border-left:4px solid #3b82f6;margin:30px 0;">
+        <tr>
+          <td style="padding:20px 24px;">
+            <ul style="margin:0;padding-left:20px;color:#737373;font-size:14px;line-height:1.8;">
+              <li>Never share this code with anyone, including KPT staff.</li>
+              <li>If you did not request this code, you can safely ignore this email.</li>
+            </ul>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:0;font-size:14px;color:#737373;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Best regards,<br><strong style="color:#1a1a1a;">KPT Partner Portal Team</strong></p>
+    `;
+
+    const html = this.generateBrandedEmailTemplate('KPT Login Verification Code', content, true);
+    return this.sendEmail({ to: email, subject, html });
   }
 }
 

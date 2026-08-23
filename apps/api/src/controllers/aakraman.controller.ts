@@ -133,7 +133,7 @@ export class AakramanController {
   }
 
   /**
-   * Send OTP via Email (Plunk)
+   * Send OTP via Email (Resend)
    * POST /api/aakraman/send-otp/email
    */
   async sendEmailOtp(req: Request, res: Response): Promise<void> {
@@ -174,12 +174,11 @@ export class AakramanController {
         }
       });
 
-      // Send OTP via Plunk
       const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
       const sent = await emailService.sendAakramanOtpEmail(email, userName, otp);
 
       if (!sent) {
-        console.warn('Plunk failed to send OTP email, but OTP stored in DB:', otp);
+        console.warn('[EmailService] Failed to send Aakraman OTP email — OTP is stored in DB');
       }
 
       res.json({

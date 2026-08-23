@@ -7,7 +7,7 @@ const router = Router();
 const quoteController = new QuoteController();
 
 router.use(requireAuth);
-router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN]));
+router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN, UserRole.SALES]));
 
 // GET /api/quotes - List all quotes (paginated, filterable)
 router.get('/', quoteController.getAllQuotes.bind(quoteController));
