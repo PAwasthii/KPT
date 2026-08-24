@@ -41,6 +41,10 @@ export default function DocumentsPage() {
   };
 
   if (partner.currentStage < 3) {
+    const stageMsg: Record<number, string> = {
+      1: 'Our field executive will be assigned to visit your location. Document upload opens after your field visit is completed.',
+      2: 'Your field visit is scheduled or in progress. Document upload will unlock once the field executive submits the visit report.',
+    };
     return (
       <div className="p-6 max-w-3xl">
         <h1 className="text-[22px] font-bold text-slate-800 mb-6">Documents</h1>
@@ -49,7 +53,8 @@ export default function DocumentsPage() {
             <svg className="w-6 h-6 text-[#92400E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
           </div>
           <h2 className="text-[16px] font-semibold text-slate-800 mb-2">Document Upload Locked</h2>
-          <p className="text-[14px] text-[#6B6B6B]">Document upload opens after your field verification (Stage 2) is complete. You are currently at Stage {partner.currentStage}.</p>
+          <p className="text-[14px] text-[#6B6B6B] mb-1">{stageMsg[partner.currentStage] ?? 'Complete the previous stage to unlock document upload.'}</p>
+          <p className="text-[12px] text-[#9CA3AF] mt-2">Current stage: <strong>{partner.currentStage}</strong> of 5. Unlocks at Stage 3.</p>
         </div>
       </div>
     );
