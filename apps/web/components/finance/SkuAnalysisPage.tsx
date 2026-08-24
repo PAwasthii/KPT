@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { Input } from "@repo/ui/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/ui/select";
-import { AlertCircle, Search, Info, X } from "lucide-react";
+import { AlertCircle, Search, Info, X, TrendingUp, AlertTriangle } from "lucide-react";
 import { useSkuAnalysis } from "../../hooks/useFinance";
 import { useCurrency } from "../../contexts/CurrencyContext";
 
@@ -37,12 +37,15 @@ export function SkuAnalysisPage() {
   function clearFilters() { setSkuSearch(''); setCategory(''); setPeriod(''); }
   const hasFilters = skuSearch || category || period;
 
+  const topBySales = [...skus].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  const lowStock = skus.filter((s) => s.stockStatus === 'LOW' || s.stockStatus === 'CRITICAL' || s.stockStatus === 'OUT_OF_STOCK');
+
   return (
     <div className="p-6 space-y-6 animate-kpt-fade-up">
       {/* Margin disclaimer */}
       <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
-        <span>Gross profit and margin are not available — product cost data is not recorded in the system. Only revenue and unit quantities are shown.</span>
+        <span>Gross profit and margin are not shown — product cost data is not recorded in the system. Only revenue and unit quantities are available.</span>
       </div>
 
       {/* Summary Cards */}
@@ -53,10 +56,82 @@ export function SkuAnalysisPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Total SKUs</p><p className="text-2xl font-bold">{summary.totalSkus ?? 0}</p></CardContent></Card>
-          <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Top Revenue SKU</p><p className="text-base font-bold truncate">{summary.topRevenueSku || '—'}</p></CardContent></Card>
-          <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Top Selling SKU</p><p className="text-base font-bold truncate">{summary.topSellingSku || '—'}</p></CardContent></Card>
-          <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Low Stock SKUs</p><p className="text-2xl font-bold text-amber-600">{summary.lowStockSkus ?? 0}</p></CardContent></Card>
+          <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Top Revenue SKU</p><p className="text-base font-bold font-mono truncate">{summary.topRevenueSku || '—'}</p></CardContent></Card>
+          <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Top Selling SKU</p><p className="text-base font-bold font-mono truncate">{summary.topSellingSku || '—'}</p></CardContent></Card>
+          <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Low / Critical Stock</p><p className="text-2xl font-bold text-amber-600">{summary.lowStockSkus ?? 0}</p></CardContent></Card>
           <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground uppercase tracking-wide">Total SKU Revenue</p><p className="text-xl font-bold">{f(summary.totalSkuRevenue ?? 0)}</p></CardContent></Card>
+        </div>
+      )}
+
+      {/* Top Performers + Low Stock panels */}
+      {!isLoading && !error && (topBySales.length > 0 || lowStock.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {topBySales.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold text-primary flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4" /> Top Revenue SKUs
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left px-4 py-2 text-muted-foreground font-semibold">SKU</th>
+                      <th className="text-right px-4 py-2 text-muted-foreground font-semibold">Revenue</th>
+                      <th className="text-right px-4 py-2 text-muted-foreground font-semibold">Units</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {topBySales.map((s, idx) => (
+                      <tr key={s.sku} className="hover:bg-muted/20">
+                        <td className="px-4 py-2">
+                          <span className="text-muted-foreground mr-1">#{idx + 1}</span>
+                          <span className="font-mono font-medium">{s.sku}</span>
+                        </td>
+                        <td className="px-4 py-2 text-right font-semibold">{f(s.revenue)}</td>
+                        <td className="px-4 py-2 text-right text-muted-foreground">{s.unitsSold}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
+
+          {lowStock.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold text-amber-700 flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4" /> Low / Critical Stock SKUs
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left px-4 py-2 text-muted-foreground font-semibold">SKU</th>
+                      <th className="text-right px-4 py-2 text-muted-foreground font-semibold">Stock</th>
+                      <th className="text-left px-4 py-2 text-muted-foreground font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {lowStock.map((s) => (
+                      <tr key={s.sku} className="hover:bg-muted/20">
+                        <td className="px-4 py-2 font-mono font-medium">{s.sku}</td>
+                        <td className="px-4 py-2 text-right">{s.currentStock}</td>
+                        <td className="px-4 py-2">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STOCK_STATUS_STYLES[s.stockStatus] || 'bg-gray-100 text-gray-600'}`}>
+                            {s.stockStatus.replace('_', ' ')}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -88,7 +163,7 @@ export function SkuAnalysisPage() {
         )}
       </div>
 
-      {/* SKU Table */}
+      {/* Full SKU Table */}
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
@@ -108,8 +183,8 @@ export function SkuAnalysisPage() {
                     <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Product</th>
                     <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Category</th>
                     <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Units Sold</th>
+                    <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Orders</th>
                     <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Revenue</th>
-                    <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Margin</th>
                     <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Stock</th>
                     <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Status</th>
                   </tr>
@@ -119,10 +194,10 @@ export function SkuAnalysisPage() {
                     <tr key={sku.sku} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs font-medium text-primary">{sku.sku}</td>
                       <td className="px-4 py-3 text-foreground max-w-[180px] truncate">{sku.productName}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{sku.category}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{sku.category || '—'}</td>
                       <td className="px-4 py-3 text-right">{sku.unitsSold.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">{sku.orderCount ?? 0}</td>
                       <td className="px-4 py-3 text-right font-medium">{f(sku.revenue)}</td>
-                      <td className="px-4 py-3 text-right text-muted-foreground italic">N/A</td>
                       <td className="px-4 py-3 text-right">{sku.currentStock.toLocaleString()}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STOCK_STATUS_STYLES[sku.stockStatus] || 'bg-gray-100 text-gray-600'}`}>

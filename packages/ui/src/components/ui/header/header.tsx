@@ -43,7 +43,7 @@ export function Header({
       )}
       {...props}
     >
-      <div className="flex h-16 items-center justify-between px-4 pr-6 bg-white shadow-sm w-full">
+      <div className="flex h-16 items-center justify-between px-4 pr-6 bg-card shadow-sm border-b border-border w-full">
         {/* Left side */}
         <div className="flex items-center">
           {icon && (
@@ -74,10 +74,7 @@ export function Header({
           )}
         </div>
       </div>
-      <div
-        className="h-[2px] w-full"
-        style={{ background: "linear-gradient(90deg, #2563EB 0%, #60A5FA 60%, #93C5FD 100%)" }}
-      />
+      <div className="h-[2px] w-full bg-gradient-to-r from-primary via-primary/40 to-transparent" />
     </header>
   )
 }

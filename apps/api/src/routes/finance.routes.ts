@@ -29,6 +29,9 @@ router.post('/budgets', requireRole(manageRoles), controller.createBudget.bind(c
 router.put('/budgets/:id', requireRole(manageRoles), controller.updateBudget.bind(controller));
 router.delete('/budgets/:id', requireRole(manageRoles), controller.deleteBudget.bind(controller));
 
+// Finance Incentive liability view
+router.get('/incentives', requireRole(viewRoles), controller.getIncentives.bind(controller));
+
 // Integration (stub)
 router.get('/integration/status', requireRole(viewRoles), controller.getIntegrationStatus.bind(controller));
 router.post('/integration/sync', requireRole(manageRoles), controller.syncIntegration.bind(controller));

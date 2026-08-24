@@ -186,7 +186,7 @@ export default function PartnerDetailPage() {
                 <a href={`https://www.google.com/maps?q=${partner.fieldReport.geoLat},${partner.fieldReport.geoLng}`} target="_blank" rel="noreferrer"
                   className="mt-2 block text-[12px] text-[#2563EB] hover:underline">View on Google Maps</a>
               )}
-              <Link href={`/kpt-admin/field/${partner.crn}`} className="mt-3 block text-center border border-[#2563EB] text-[#2563EB] text-[12px] py-2 rounded-[4px] hover:bg-[rgba(37,99,235,0.08)] transition-colors">
+              <Link href={`/partner-applications/field/${partner.crn}`} className="mt-3 block text-center border border-border text-primary text-xs py-2 rounded-md hover:bg-accent transition-colors">
                 {partner.fieldReport.visitedAt ? 'Reassign Field Exec' : 'Submit Field Report'}
               </Link>
             </div>

@@ -15,104 +15,103 @@
 	--max-width-screen-3xl: 1920px;
 
 	/* -------- KPT brand palette (raw tokens) -------- */
-	--brand-orange: #e8651a; /* KPT Orange   — logo, primary actions, CTAs */
-	--brand-charcoal: #2c2c2c; /* KPT Charcoal — logo text, headings, navigation */
-	--brand-orange-dark: #c4521a; /* Orange Dark  — hover states */
-	--brand-orange-pale: #fef3eb; /* Orange Pale  — backgrounds, subtle tints */
-	--brand-soft-white: #f5f5f5; /* Off White    — backgrounds, cards */
-	--brand-stone: #6b7280; /* Stone Grey   — secondary text, icons */
-	--brand-cool-grey: #e0e0e0; /* Cool Grey    — borders, dividers */
-	--brand-amber: #f59e0b; /* Amber        — warnings, notifications */
-	--brand-coral: #ef4444; /* Red          — errors, urgent */
-	--brand-green: #22c55e; /* Green        — success, positive */
-	--brand-blue: #3b82f6; /* Blue         — insights, analytics */
-	--brand-purple: #8b5cf6; /* Purple       — opportunities, highlights */
-	--brand-navy: #0D1B45;         /* KPT Navy — sidebar base */
-	--brand-kpt-blue: #1A4FA3;     /* KPT Corporate Blue */
-	--brand-kpt-blue-light: #EEF3FF; /* Blue pale tint */
-	/* Legacy aliases — remapped to blue-gray theme */
-	--brand-indigo: #1e40af;
-	--brand-teal: #2563EB;
-	--brand-turquoise: #1D4ED8;
-	--brand-mint: #E0E7FF;
-	--brand-pale-aqua: #EFF6FF;
-	--brand-lavender: #F1F5F9;
+	--brand-orange: #e8651a;       /* KPT Orange   — logo, primary actions, CTAs */
+	--brand-charcoal: #2c2c2c;     /* KPT Charcoal — logo text, headings, navigation */
+	--brand-orange-dark: #c4521a;  /* Orange Dark  — hover states */
+	--brand-orange-pale: #fef3eb;  /* Orange Pale  — backgrounds, subtle tints */
+	--brand-soft-white: #f5f5f5;   /* Off White    — backgrounds, cards */
+	--brand-stone: #6b7280;        /* Stone Grey   — secondary text, icons */
+	--brand-cool-grey: #e0e0e0;    /* Cool Grey    — borders, dividers */
+	--brand-amber: #f59e0b;        /* Amber        — warnings, notifications */
+	--brand-coral: #ef4444;        /* Red          — errors, urgent */
+	--brand-green: #22c55e;        /* Green        — success, positive */
+	--brand-blue: #3b82f6;         /* Blue         — insights, analytics */
+	--brand-purple: #8b5cf6;       /* Purple       — opportunities, highlights */
+	/* Legacy aliases so existing Tailwind utilities keep working */
+	--brand-indigo: #2c2c2c;
+	--brand-teal: #e8651a;
+	--brand-turquoise: #c4521a;
+	--brand-mint: #fef3eb;
+	--brand-pale-aqua: #fef3eb;
+	--brand-lavender: #f5f5f5;
 	--brand-sky: #3b82f6;
 	--brand-lime: #22c55e;
 }
 
 :root {
-	--background: #F1F5F9;
-	--foreground: #0F172A;
+	--background: #f5f5f5;
+	--foreground: #2c2c2c;
 	--card: #ffffff;
-	--card-foreground: #0F172A;
+	--card-foreground: #2c2c2c;
 	--popover: #ffffff;
-	--popover-foreground: #0F172A;
-	--primary: #2563EB;
+	--popover-foreground: #2c2c2c;
+	--primary: #e8651a;            /* KPT Orange — primary actions / CTAs / buttons */
 	--primary-foreground: #ffffff;
-	--secondary: #E0E7FF;
-	--secondary-foreground: #1e40af;
-	--muted: #F8FAFC;
-	--muted-foreground: #64748B;
-	--accent: #EEF2FF;
-	--accent-foreground: #1e40af;
-	--destructive: #EF4444;
-	--destructive-foreground: #ffffff;
-	--border: #E2E8F0;
-	--input: #E2E8F0;
-	--ring: #2563EB;
-	--chart-1: #2563EB;
-	--chart-2: #0F172A;
-	--chart-3: #F59E0B;
-	--chart-4: #10B981;
-	--chart-5: #8B5CF6;
-	--radius: 0.75rem;
-	--navbar: #ffffff;
-	/* Sidebar — clean white with cool blue-gray active states */
-	--sidebar: #ffffff;
-	--sidebar-foreground: #475569;
-	--sidebar-primary: #EFF6FF;
-	--sidebar-primary-foreground: #1D4ED8;
-	--sidebar-accent: #F1F5F9;
-	--sidebar-accent-foreground: #0F172A;
-	--sidebar-border: #E2E8F0;
-	--sidebar-ring: #2563EB;
+	--secondary: #f0f0f0;
+	--secondary-foreground: #2c2c2c;
+	--muted: #f0f0f0;
+	--muted-foreground: #6b7280;
+	--accent: #fef3eb;             /* Orange Pale — hover / subtle accent surfaces */
+	--accent-foreground: #2c2c2c;
+	--destructive: hsl(0 84.2% 60.2%);
+	--destructive-foreground: hsl(0 0% 98%);
+	--border: #e0e0e0;
+	--input: #e0e0e0;
+	--ring: #e8651a;               /* KPT Orange focus ring */
+	--chart-1: #e8651a;            /* KPT Orange */
+	--chart-2: #2c2c2c;            /* Charcoal */
+	--chart-3: #f59e0b;            /* Amber */
+	--chart-4: #3b82f6;            /* Blue */
+	--chart-5: #8b5cf6;            /* Purple */
+	--radius: 0.6rem;
+	--navbar: #1e1e1e;
+	/* Sidebar — dark charcoal rail with white text and orange active state */
+	--sidebar: #1e1e1e;
+	--sidebar-foreground: #f5f5f5;
+	--sidebar-primary: #e8651a;    /* KPT Orange — active item */
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #2c2c2c;     /* hover */
+	--sidebar-accent-foreground: #ffffff;
+	--sidebar-border: #333333;
+	--sidebar-ring: #e8651a;
+	--sidebar-gradient: linear-gradient(180deg, #1e1e1e 0%, #1e1e1e 80%, #2c1a0e 95%, #e8651a 100%);
 }
 
 .dark {
-	--background: #0F172A;
-	--foreground: #F8FAFC;
-	--card: #1E293B;
-	--card-foreground: #F8FAFC;
-	--popover: #1E293B;
-	--popover-foreground: #F8FAFC;
-	--primary: #3B82F6;
+	--background: #141414;
+	--foreground: #f5f5f5;
+	--card: #1e1e1e;
+	--card-foreground: #f5f5f5;
+	--popover: #1e1e1e;
+	--popover-foreground: #f5f5f5;
+	--primary: #f97316;
 	--primary-foreground: #ffffff;
-	--secondary: #1E3A5F;
-	--secondary-foreground: #BFDBFE;
-	--muted: #1E293B;
-	--muted-foreground: #94A3B8;
-	--accent: #1E3A5F;
-	--accent-foreground: #BFDBFE;
-	--destructive: #EF4444;
-	--destructive-foreground: #ffffff;
-	--border: #334155;
-	--input: #334155;
-	--ring: #3B82F6;
-	--chart-1: #3B82F6;
-	--chart-2: #F59E0B;
-	--chart-3: #10B981;
-	--chart-4: #8B5CF6;
-	--chart-5: #F97316;
-	--navbar: #1E293B;
-	--sidebar: #1E293B;
-	--sidebar-foreground: #94A3B8;
-	--sidebar-primary: #1E3A5F;
-	--sidebar-primary-foreground: #93C5FD;
-	--sidebar-accent: #0F172A;
-	--sidebar-accent-foreground: #F8FAFC;
-	--sidebar-border: #334155;
-	--sidebar-ring: #3B82F6;
+	--secondary: #2c2c2c;
+	--secondary-foreground: #f5f5f5;
+	--muted: #2c2c2c;
+	--muted-foreground: #9ca3af;
+	--accent: #3d2010;
+	--accent-foreground: #f5f5f5;
+	--destructive: hsl(0 62.8% 45%);
+	--destructive-foreground: hsl(0 0% 98%);
+	--border: #333333;
+	--input: #333333;
+	--ring: #e8651a;
+	--chart-1: #f97316;
+	--chart-2: #f59e0b;
+	--chart-3: #22c55e;
+	--chart-4: #3b82f6;
+	--chart-5: #8b5cf6;
+	--navbar: #141414;
+	--sidebar: #1e1e1e;
+	--sidebar-foreground: #f5f5f5;
+	--sidebar-primary: #e8651a;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #2c2c2c;
+	--sidebar-accent-foreground: #f5f5f5;
+	--sidebar-border: #333333;
+	--sidebar-ring: #e8651a;
+	--sidebar-gradient: linear-gradient(180deg, #1e1e1e 0%, #1e1e1e 80%, #2c1a0e 95%, #e8651a 100%);
 }
 
 @theme inline {
@@ -167,9 +166,6 @@
 	--color-brand-green: var(--brand-green);
 	--color-brand-blue: var(--brand-blue);
 	--color-brand-purple: var(--brand-purple);
-	--color-brand-navy: var(--brand-navy);
-	--color-brand-kpt-blue: var(--brand-kpt-blue);
-	--color-brand-kpt-blue-light: var(--brand-kpt-blue-light);
 	/* Legacy aliases */
 	--color-brand-indigo: var(--brand-indigo);
 	--color-brand-teal: var(--brand-teal);
@@ -208,7 +204,7 @@
 }
 
 /* -------------------------------------------------------------------------
-   KPT sidebar theming — clean white rail with blue active states.
+   KPT sidebar theming — dark charcoal rail with orange active states.
    ------------------------------------------------------------------------- */
 .kpt-sidebar {
 	background-color: var(--sidebar) !important;
@@ -257,16 +253,16 @@
 		transition: box-shadow 0.25s ease;
 	}
 	[data-slot="card"]:hover {
-		box-shadow: 0 4px 20px -4px rgba(37, 99, 235, 0.08), 0 2px 8px -2px rgba(37, 99, 235, 0.04);
+		box-shadow: 0 4px 20px -4px rgba(232, 101, 26, 0.08), 0 2px 8px -2px rgba(232, 101, 26, 0.04);
 	}
 	/* Table row smooth highlight */
 	tbody tr {
 		transition: background-color 0.12s ease;
 	}
-	/* Thin scrollbar with KPT blue tint */
+	/* Thin scrollbar with KPT orange tint */
 	* {
 		scrollbar-width: thin;
-		scrollbar-color: rgba(26, 79, 163, 0.18) transparent;
+		scrollbar-color: rgba(232, 101, 26, 0.18) transparent;
 	}
 	::-webkit-scrollbar {
 		width: 5px;
@@ -276,11 +272,11 @@
 		background: transparent;
 	}
 	::-webkit-scrollbar-thumb {
-		background: rgba(26, 79, 163, 0.2);
+		background: rgba(232, 101, 26, 0.2);
 		border-radius: 99px;
 	}
 	::-webkit-scrollbar-thumb:hover {
-		background: rgba(26, 79, 163, 0.35);
+		background: rgba(232, 101, 26, 0.35);
 	}
 }
 

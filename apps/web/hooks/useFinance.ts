@@ -11,6 +11,7 @@ export const financeKeys = {
   skuDetail: (sku: string) => ['finance', 'sku-detail', sku] as const,
   budgets: (params?: Record<string, any>) => ['finance', 'budgets', params] as const,
   budget: (id: number) => ['finance', 'budget', id] as const,
+  incentives: (params?: Record<string, any>) => ['finance', 'incentives', params] as const,
   integrationStatus: () => ['finance', 'integration', 'status'] as const,
   integrationLogs: () => ['finance', 'integration', 'logs'] as const,
 };
@@ -140,6 +141,15 @@ export function useDeleteBudget() {
       qc.invalidateQueries({ queryKey: ['finance', 'budgets'] });
       qc.invalidateQueries({ queryKey: financeKeys.overview() });
     },
+  });
+}
+
+// ─── Incentives ──────────────────────────────────────────────────────────────
+export function useFinanceIncentives(params?: { period?: string; status?: string }) {
+  return useQuery({
+    queryKey: financeKeys.incentives(params),
+    queryFn: () => kptFinanceService.getIncentives(params),
+    staleTime: 2 * 60 * 1000,
   });
 }
 

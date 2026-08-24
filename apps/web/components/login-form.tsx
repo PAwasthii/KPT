@@ -119,7 +119,7 @@ function PasswordTab() {
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <Link
               href="/forgot-password"
-              className="ml-auto text-sm text-primary underline-offset-2 hover:text-blue-700 hover:underline"
+              className="ml-auto text-sm text-primary underline-offset-2 hover:text-brand-orange-dark hover:underline"
             >
               Forgot Password?
             </Link>

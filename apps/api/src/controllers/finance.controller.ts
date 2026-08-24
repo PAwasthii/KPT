@@ -30,16 +30,19 @@ export class FinanceController {
       const [
         revenueAgg,
         invoiceAgg,
-        outstandingAgg,
+        nonOverdueUnpaid,
+        overdueInvoices,
         collectionsAgg,
         incentiveLiabilityAgg,
         yearBudgetAgg,
         invoicesByStatus,
         salesOrders,
-        partnerIncentives,
-        lineItemsByCategory,
+        incentiveByStatus,
+        topSkuLineItems,
         partnerRevenue,
         monthlyBudgets,
+        paidInvoicesTrend,
+        overdueInvoiceList,
       ] = await Promise.all([
         // Total revenue from active sales orders YTD
         prisma.salesOrder.aggregate({
@@ -51,9 +54,14 @@ export class FinanceController {
           where: { status: { not: FinanceInvoiceStatus.CANCELLED } },
           _sum: { totalAmount: true },
         }),
-        // Outstanding: unpaid invoices
+        // Outstanding (not yet overdue): ISSUED + PARTIALLY_PAID
         prisma.financeInvoice.findMany({
-          where: { status: { in: [FinanceInvoiceStatus.ISSUED, FinanceInvoiceStatus.OVERDUE, FinanceInvoiceStatus.PARTIALLY_PAID] } },
+          where: { status: { in: [FinanceInvoiceStatus.ISSUED, FinanceInvoiceStatus.PARTIALLY_PAID] } },
+          select: { totalAmount: true, paidAmount: true },
+        }),
+        // Overdue: OVERDUE status only
+        prisma.financeInvoice.findMany({
+          where: { status: FinanceInvoiceStatus.OVERDUE },
           select: { totalAmount: true, paidAmount: true },
         }),
         // Collections: paid amounts
@@ -61,7 +69,7 @@ export class FinanceController {
           where: { status: { in: [FinanceInvoiceStatus.PAID, FinanceInvoiceStatus.PARTIALLY_PAID] } },
           _sum: { paidAmount: true },
         }),
-        // Incentive liability: approved but not paid
+        // Incentive payable: approved but not yet paid
         prisma.partnerIncentive.aggregate({
           where: { status: IncentiveStatus.APPROVED },
           _sum: { netReward: true },
@@ -77,22 +85,29 @@ export class FinanceController {
           _count: { id: true },
           _sum: { totalAmount: true },
         }),
-        // Monthly sales orders for revenue vs budget chart
+        // Monthly sales orders for revenue trend
         prisma.salesOrder.findMany({
           where: { status: { in: ACTIVE_ORDER_STATUSES }, orderDate: { gte: startOfYear } },
           select: { orderDate: true, grandTotal: true },
         }),
-        // Incentive financial impact
+        // Incentive breakdown by status
         prisma.partnerIncentive.groupBy({
           by: ['status'],
-          _sum: { incentiveAmount: true, adjustment: true, netReward: true },
+          _sum: { incentiveAmount: true, netReward: true },
+          _count: { id: true },
         }),
-        // Revenue by product category via sales order line items
-        prisma.salesOrderLineItem.findMany({
-          where: { salesOrder: { status: { in: ACTIVE_ORDER_STATUSES }, orderDate: { gte: startOfYear } } },
-          select: { totalPrice: true, product: { select: { category: { select: { name: true } } } } },
+        // Top 10 SKUs by revenue (YTD)
+        prisma.salesOrderLineItem.groupBy({
+          by: ['productId'],
+          where: {
+            salesOrder: { status: { in: ACTIVE_ORDER_STATUSES }, orderDate: { gte: startOfYear } },
+          },
+          _sum: { totalPrice: true, quantity: true },
+          _count: true,
+          orderBy: { _sum: { totalPrice: 'desc' } },
+          take: 10,
         }),
-        // Revenue by partner — derived from actual SalesOrders with channelPartnerId
+        // Revenue by partner (top 10)
         prisma.salesOrder.groupBy({
           by: ['channelPartnerId'],
           where: {
@@ -109,10 +124,29 @@ export class FinanceController {
           where: { year: currentYear, budgetType: FinanceBudgetType.REVENUE, month: { not: null } },
           select: { month: true, budgetAmount: true },
         }),
+        // Paid invoices for monthly collections trend
+        prisma.financeInvoice.findMany({
+          where: {
+            status: { in: [FinanceInvoiceStatus.PAID, FinanceInvoiceStatus.PARTIALLY_PAID] },
+          },
+          select: { invoiceDate: true, paymentDate: true, paidAmount: true },
+        }),
+        // Top overdue invoices for receivables table
+        prisma.financeInvoice.findMany({
+          where: { status: FinanceInvoiceStatus.OVERDUE },
+          include: { partner: { select: { id: true, name: true } } },
+          orderBy: { totalAmount: 'desc' },
+          take: 10,
+        }),
       ]);
 
-      // Compute outstanding
-      const outstanding = outstandingAgg.reduce((sum, inv) => {
+      // Compute outstanding (ISSUED + PARTIALLY_PAID only)
+      const outstanding = nonOverdueUnpaid.reduce((sum, inv) => {
+        return sum + (Number(inv.totalAmount) - Number(inv.paidAmount));
+      }, 0);
+
+      // Compute overdue balance
+      const overdue = overdueInvoices.reduce((sum, inv) => {
         return sum + (Number(inv.totalAmount) - Number(inv.paidAmount));
       }, 0);
 
@@ -134,29 +168,34 @@ export class FinanceController {
         return { month: m, actual, budget, variance: actual - budget };
       });
 
+      // Monthly collections trend
+      const monthlyCollections: Record<number, number> = {};
+      for (const inv of paidInvoicesTrend) {
+        const dateRef = inv.paymentDate ?? inv.invoiceDate;
+        const d = new Date(dateRef);
+        if (d.getFullYear() === currentYear) {
+          const m = d.getMonth() + 1;
+          monthlyCollections[m] = (monthlyCollections[m] || 0) + Number(inv.paidAmount);
+        }
+      }
+      const revenueTrend = Array.from({ length: currentMonth }, (_, i) => {
+        const m = i + 1;
+        return { month: m, revenue: monthlyRevenue[m] || 0, collections: monthlyCollections[m] || 0 };
+      });
+
       // Invoice status summary
       const invoiceStatusMap: Record<string, { count: number; amount: number }> = {};
       for (const row of invoicesByStatus) {
         invoiceStatusMap[row.status] = { count: row._count.id, amount: Number(row._sum.totalAmount || 0) };
       }
 
-      // Revenue by category
-      const categoryRevMap: Record<string, number> = {};
-      for (const item of lineItemsByCategory) {
-        const cat = item.product?.category?.name || 'Uncategorised';
-        categoryRevMap[cat] = (categoryRevMap[cat] || 0) + Number(item.totalPrice);
-      }
-      const revenueByCategory = Object.entries(categoryRevMap)
-        .map(([category, revenue]) => ({ category, revenue }))
-        .sort((a, b) => b.revenue - a.revenue);
-
-      // Incentive financial impact
-      const incentiveImpact: Record<string, { grossIncentive: number; adjustment: number; netReward: number }> = {};
-      for (const row of partnerIncentives) {
-        incentiveImpact[row.status] = {
-          grossIncentive: Number(row._sum.incentiveAmount || 0),
-          adjustment: Number(row._sum.adjustment || 0),
-          netReward: Number(row._sum.netReward || 0),
+      // Incentive liability breakdown by status
+      const incentiveLiabilityMap: Record<string, { count: number; gross: number; net: number }> = {};
+      for (const row of incentiveByStatus) {
+        incentiveLiabilityMap[row.status] = {
+          count: row._count.id,
+          gross: Number(row._sum.incentiveAmount || 0),
+          net: Number(row._sum.netReward || 0),
         };
       }
 
@@ -182,6 +221,42 @@ export class FinanceController {
         };
       });
 
+      // Enrich top SKU line items with product names
+      const topProductIds = topSkuLineItems
+        .map(r => r.productId)
+        .filter((id): id is number => id !== null);
+      const topProducts = topProductIds.length
+        ? await prisma.product.findMany({
+            where: { id: { in: topProductIds } },
+            select: { id: true, name: true, code: true },
+          })
+        : [];
+      const topProductMap = new Map(topProducts.map(p => [p.id, p]));
+      const topRevenueSkus = topSkuLineItems.map(r => {
+        const prod = r.productId ? topProductMap.get(r.productId) : undefined;
+        return {
+          sku: prod?.code ?? 'Unknown',
+          productName: prod?.name ?? 'Unknown',
+          revenue: Number(r._sum?.totalPrice || 0),
+          unitsSold: Number(r._sum?.quantity || 0),
+          orderCount: typeof r._count === 'number' ? r._count : (r._count as any)._all ?? 0,
+        };
+      });
+
+      // Overdue receivables list
+      const overdueReceivables = overdueInvoiceList.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        partnerName: (inv as any).partner?.name ?? inv.billingName ?? 'Unknown',
+        totalAmount: Number(inv.totalAmount),
+        paidAmount: Number(inv.paidAmount),
+        balance: Number(inv.totalAmount) - Number(inv.paidAmount),
+        dueDate: inv.dueDate,
+        daysPastDue: inv.dueDate
+          ? Math.max(0, Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / 86400000))
+          : null,
+      }));
+
       const totalRevenue = Number(revenueAgg._sum.grandTotal || 0);
       const totalBudget = Number(yearBudgetAgg._sum.budgetAmount || 0);
       const budgetAchievement = totalBudget > 0 ? Math.round((totalRevenue / totalBudget) * 100) : null;
@@ -190,19 +265,22 @@ export class FinanceController {
         success: true,
         data: {
           kpis: {
-            totalRevenue,
-            totalInvoiced: Number(invoiceAgg._sum.totalAmount || 0),
+            invoiced: Number(invoiceAgg._sum.totalAmount || 0),
+            collected: Number(collectionsAgg._sum.paidAmount || 0),
             outstanding,
-            collections: Number(collectionsAgg._sum.paidAmount || 0),
-            incentiveLiability: Number(incentiveLiabilityAgg._sum.netReward || 0),
+            overdue,
+            incentivePayable: Number(incentiveLiabilityAgg._sum.netReward || 0),
             budgetAchievement,
+            totalRevenue,
             totalBudget,
           },
+          revenueTrend,
           revenueVsBudget,
           invoiceStatusSummary: invoiceStatusMap,
           revenueByPartner,
-          revenueByCategory,
-          incentiveFinancialImpact: incentiveImpact,
+          topRevenueSkus,
+          overdueReceivables,
+          incentiveLiability: incentiveLiabilityMap,
         },
       });
     } catch (error) {
@@ -451,7 +529,7 @@ export class FinanceController {
         // Revenue + units via SalesOrderLineItem joined to Product
         prisma.salesOrderLineItem.findMany({
           where: lineItemWhere,
-          select: { quantity: true, totalPrice: true, product: { select: { code: true } } },
+          select: { salesOrderId: true, quantity: true, totalPrice: true, product: { select: { code: true } } },
         }),
         // Current stock per SKU (sum across partners)
         prisma.stockEntry.groupBy({
@@ -462,13 +540,14 @@ export class FinanceController {
       ]);
 
       // Aggregate line items by SKU (product.code = sku)
-      const revenueBySkuCode: Record<string, { units: number; revenue: number }> = {};
+      const revenueBySkuCode: Record<string, { units: number; revenue: number; orderIds: Set<number> }> = {};
       for (const li of lineItemsRaw) {
         const code = li.product?.code;
         if (!code) continue;
-        if (!revenueBySkuCode[code]) revenueBySkuCode[code] = { units: 0, revenue: 0 };
+        if (!revenueBySkuCode[code]) revenueBySkuCode[code] = { units: 0, revenue: 0, orderIds: new Set() };
         revenueBySkuCode[code].units += li.quantity;
         revenueBySkuCode[code].revenue += Number(li.totalPrice);
+        revenueBySkuCode[code].orderIds.add((li as any).salesOrderId);
       }
 
       const stockBySku: Record<string, { qty: number; status: string }> = {};
@@ -477,7 +556,7 @@ export class FinanceController {
       }
 
       const skus = inventoryItems.map((item) => {
-        const rev = revenueBySkuCode[item.sku] || { units: 0, revenue: 0 };
+        const rev = revenueBySkuCode[item.sku] || { units: 0, revenue: 0, orderIds: new Set<number>() };
         const stock = stockBySku[item.sku] || { qty: item.totalQty, status: item.stockStatus };
         return {
           sku: item.sku,
@@ -485,6 +564,7 @@ export class FinanceController {
           category: item.category,
           unitsSold: rev.units,
           revenue: rev.revenue,
+          orderCount: rev.orderIds.size,
           cost: null,
           grossProfit: null,
           margin: null,
@@ -589,9 +669,12 @@ export class FinanceController {
             dateFilter = { gte: new Date(budget.year, 0, 1), lt: new Date(budget.year + 1, 0, 1) };
           }
 
-          let actualQuery: any = { status: { in: ACTIVE_ORDER_STATUSES }, orderDate: dateFilter };
+          const actualQuery: any = { status: { in: ACTIVE_ORDER_STATUSES }, orderDate: dateFilter };
           if (budget.partnerId && budget.dimensionType === FinanceBudgetDimension.PARTNER) {
-            // Can't directly filter sales orders by partner; skip granular filter
+            actualQuery.channelPartnerId = budget.partnerId;
+          }
+          if (budget.dimensionValue && budget.dimensionType === FinanceBudgetDimension.REGION) {
+            actualQuery.channelPartner = { region: budget.dimensionValue };
           }
 
           const agg = await prisma.salesOrder.aggregate({
@@ -786,6 +869,46 @@ export class FinanceController {
       return res.json({ success: true, data: logs });
     } catch (error) {
       handleError(error, res, 'Get integration logs');
+    }
+  }
+
+  // ─── INCENTIVES (Finance liability view) ─────────────────────────────────────
+
+  async getIncentives(req: Request, res: Response) {
+    try {
+      const { period, status } = req.query;
+      const where: any = {};
+      if (status && status !== 'ALL') where.status = status as IncentiveStatus;
+      if (period) where.period = period as string;
+
+      const [incentives, summary] = await Promise.all([
+        prisma.partnerIncentive.findMany({
+          where,
+          include: {
+            partner: { select: { id: true, name: true, code: true, tier: true } },
+            slab: { select: { tier: true, incentivePercent: true } },
+          },
+          orderBy: [{ period: 'desc' }, { status: 'asc' }],
+        }),
+        prisma.partnerIncentive.groupBy({
+          by: ['status'],
+          _sum: { incentiveAmount: true, netReward: true },
+          _count: { id: true },
+        }),
+      ]);
+
+      const summaryMap: Record<string, { count: number; gross: number; net: number }> = {};
+      for (const row of summary) {
+        summaryMap[row.status] = {
+          count: row._count.id,
+          gross: Number(row._sum.incentiveAmount || 0),
+          net: Number(row._sum.netReward || 0),
+        };
+      }
+
+      return res.json({ success: true, data: { incentives, summary: summaryMap } });
+    } catch (error) {
+      handleError(error, res, 'Finance incentives');
     }
   }
 }

@@ -371,7 +371,7 @@ export default function PartnerApplicationsPage() {
                           <button onClick={() => openSchedule(p)} className="text-xs text-blue-600 hover:underline font-medium">Schedule Visit</button>
                         )}
                         {p.currentStage === 2 && (
-                          <Link href={`/kpt-admin/field/${p.crn}`} className="text-xs text-emerald-700 hover:underline font-medium">Submit Report</Link>
+                          <Link href={`/partner-applications/field/${p.crn}`} className="text-xs text-emerald-700 hover:underline font-medium">Submit Report</Link>
                         )}
                         {p.currentStage === 4 && (
                           <button disabled={actionLoading === p.crn} onClick={() => handleApprove(p.crn)} className="text-xs text-emerald-700 hover:underline font-medium disabled:opacity-50">Approve</button>

@@ -278,11 +278,11 @@ export function DataTable<T extends Record<string, any>>({
                     placeholder="1–100"
                     value={customValue}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomValue(e.target.value)}
-                    className="w-16 h-7 rounded-md border border-gray-200 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-16 h-7 rounded-md border border-gray-200 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     min="1"
                     max="100"
                   />
-                  <button onClick={handleCustomSubmit} className="px-2 py-1 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                  <button onClick={handleCustomSubmit} className="px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-colors">
                     Set
                   </button>
                   <button onClick={() => { setShowCustomInput(false); setCustomValue("") }} className="px-2 py-1 text-xs rounded-md border border-gray-200 hover:bg-gray-50 transition-colors">
@@ -417,7 +417,7 @@ export function DataTable<T extends Record<string, any>>({
                       className={cn(
                         rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50/60",
                         "transition-colors",
-                        (onRowClick || hasHref) && "cursor-pointer hover:bg-blue-50/50"
+                        (onRowClick || hasHref) && "cursor-pointer hover:bg-accent/50"
                       )}
                       onClick={() => {
                         if (onRowClick) {

@@ -146,33 +146,6 @@ export function AppSidebar() {
               />
             </SidebarCollapsibleItem>
 
-            {/* Sales & Partner Performance */}
-            <SidebarCollapsibleItem
-              icon={BarChart3 as any}
-              label="Performance Analysis"
-              active={isClient && isPerformanceActive}
-              defaultOpen={isClient && isPerformanceActive}
-            >
-              <SidebarItem
-                label="Revenue Analysis"
-                href="/performance/revenue"
-                active={isClient && pathname === "/performance/revenue"}
-                icon={LineChart as any}
-              />
-              <SidebarItem
-                label="Partner Rankings"
-                href="/performance/rankings"
-                active={isClient && pathname === "/performance/rankings"}
-                icon={Trophy as any}
-              />
-              <SidebarItem
-                label="Monthly Trends"
-                href="/performance/trends"
-                active={isClient && pathname === "/performance/trends"}
-                icon={TrendingUp as any}
-              />
-            </SidebarCollapsibleItem>
-
             {/* Finance Management */}
             <SidebarCollapsibleItem
               icon={Banknote as any}
@@ -203,6 +176,12 @@ export function AppSidebar() {
                 href="/finance/budget"
                 active={isClient && pathname.startsWith("/finance/budget")}
                 icon={TrendingUp as any}
+              />
+              <SidebarItem
+                label="Incentive Liability"
+                href="/finance/incentives"
+                active={isClient && pathname.startsWith("/finance/incentives")}
+                icon={Gift as any}
               />
             </SidebarCollapsibleItem>
 
@@ -248,6 +227,33 @@ export function AppSidebar() {
                 href="/sales/orders"
                 active={isClient && pathname.startsWith("/sales/orders")}
                 icon={ShoppingCart as any}
+              />
+            </SidebarCollapsibleItem>
+
+            {/* Sales & Partner Performance */}
+            <SidebarCollapsibleItem
+              icon={BarChart3 as any}
+              label="Performance Analysis"
+              active={isClient && isPerformanceActive}
+              defaultOpen={isClient && isPerformanceActive}
+            >
+              <SidebarItem
+                label="Revenue Analysis"
+                href="/performance/revenue"
+                active={isClient && pathname === "/performance/revenue"}
+                icon={LineChart as any}
+              />
+              <SidebarItem
+                label="Partner Rankings"
+                href="/performance/rankings"
+                active={isClient && pathname === "/performance/rankings"}
+                icon={Trophy as any}
+              />
+              <SidebarItem
+                label="Monthly Trends"
+                href="/performance/trends"
+                active={isClient && pathname === "/performance/trends"}
+                icon={TrendingUp as any}
               />
             </SidebarCollapsibleItem>
 

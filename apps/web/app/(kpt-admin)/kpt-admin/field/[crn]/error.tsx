@@ -28,7 +28,7 @@ export default function FieldError({
             Try Again
           </button>
           <Link
-            href="/kpt-admin/partners"
+            href="/partner-applications"
             className="w-full border border-[#E8E8E6] text-[#6B6B6B] text-[13px] py-2.5 rounded-[4px] hover:border-[#2D2D2D] hover:text-[#2D2D2D] transition-colors text-center"
           >
             Back to Partners

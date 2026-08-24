@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Loader2, ArrowRight } from 'lucide-react';
+import { Button } from '@repo/ui/components/ui/button';
+import { Input } from '@repo/ui/components/ui/input';
+import { Field, FieldLabel, FieldGroup } from '@repo/ui/components/ui/field';
+import logo from '@/app/assets/images/logos/kpt-logo.png';
+import BrandPanel from '@/components/BrandPanel';
 
 const step1Schema = z.object({
   crn: z.string().regex(/^KPT-CP-\d{4}-\d{5}$/, 'Enter CRN in format KPT-CP-YYYY-NNNNN'),
@@ -14,9 +20,6 @@ const step1Schema = z.object({
 const step2Schema = z.object({ otp: z.string().length(6, 'Enter 6-digit OTP') });
 type Step1 = z.infer<typeof step1Schema>;
 type Step2 = z.infer<typeof step2Schema>;
-
-const INPUT = 'w-full border border-[#E8E8E6] rounded-[4px] px-4 py-3 text-[14px] text-[#2D2D2D] placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#2563EB] transition-colors';
-const ERR = 'text-[12px] text-[#2563EB] mt-1';
 
 export default function PartnerLoginPage() {
   const router = useRouter();
@@ -58,68 +61,140 @@ export default function PartnerLoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid md:grid-cols-2">
-      {/* Left */}
-      <div className="bg-[#2563EB] flex flex-col items-center justify-center p-12 text-white">
-        <Image src="https://kpt.co.in/logo_full_white.svg" alt="KPT" width={160} height={56} className="mb-10 object-contain" unoptimized />
-        <h1 className="text-[28px] font-bold text-center mb-3">KPT Partner Portal</h1>
-        <p className="text-[16px] text-white/80 text-center mb-8">Access your onboarding dashboard</p>
-        <ul className="space-y-3 w-full max-w-xs">
-          {['Track your application stage', 'Upload and manage documents', 'Sign your dealer agreement'].map(f => (
-            <li key={f} className="flex items-center gap-3 text-[14px]">
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>{f}
-            </li>
-          ))}
-        </ul>
-      </div>
+    <div className="grid h-screen w-full overflow-hidden md:grid-cols-2">
+      {/* Left: brand panel */}
+      <BrandPanel />
 
-      {/* Right */}
-      <div className="bg-white flex items-center justify-center p-8">
-        <div className="w-full max-w-sm">
-          <h2 className="text-[24px] font-bold text-slate-800 mb-1">Partner Login</h2>
-          <p className="text-[13px] text-[#6B6B6B] mb-8">
-            {step === 1 ? 'Enter your CRN and mobile number to receive an OTP.' : `OTP sent to +91-${crnMobile.mobile.slice(0, 2)}••••••${crnMobile.mobile.slice(-2)}`}
-          </p>
+      {/* Right: form panel */}
+      <div className="flex h-full flex-col items-center justify-center bg-background px-6 py-6 sm:px-12">
+        <div className="mx-auto flex w-full max-w-sm flex-col">
+          <Image
+            src={logo}
+            alt="KPT — Kulkarni Power Tools"
+            width={160}
+            height={54}
+            priority
+            className="mb-6 h-10 w-auto object-contain object-left"
+          />
 
-          {serverError && <div className="bg-[rgba(37,99,235,0.08)] border border-[#FED7AA] rounded-[6px] p-3 mb-5"><p className="text-[13px] text-[#2563EB]">{serverError}</p></div>}
+          <div className="mb-5">
+            <h1 className="text-[1.75rem] font-bold leading-[1.15] text-foreground">
+              Partner Portal
+              <br />
+              <span className="text-primary">Sign In</span>
+            </h1>
+            <span className="mt-2.5 block h-[3px] w-14 rounded-full bg-primary" />
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {step === 1
+                ? 'Enter your CRN and mobile number to receive an OTP.'
+                : `OTP sent to +91-${crnMobile.mobile.slice(0, 2)}••••••${crnMobile.mobile.slice(-2)}`}
+            </p>
+          </div>
+
+          {serverError && (
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+              {serverError}
+            </div>
+          )}
 
           {step === 1 ? (
-            <form onSubmit={form1.handleSubmit(onStep1)} className="space-y-4">
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.08em] text-[#6B6B6B] mb-1.5">Channel Reference Number (CRN)</label>
-                <input {...form1.register('crn')} className={INPUT} placeholder="KPT-CP-2025-00142" />
-                {form1.formState.errors.crn && <p className={ERR}>{form1.formState.errors.crn.message}</p>}
-              </div>
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.08em] text-[#6B6B6B] mb-1.5">Registered Mobile Number</label>
-                <input {...form1.register('mobile')} className={INPUT} placeholder="9876543210" maxLength={10} />
-                {form1.formState.errors.mobile && <p className={ERR}>{form1.formState.errors.mobile.message}</p>}
-              </div>
-              <button type="submit" disabled={form1.formState.isSubmitting} className="w-full bg-[#2563EB] text-white text-[14px] font-semibold uppercase tracking-[0.05em] py-3 rounded-[4px] hover:bg-[#1D4ED8] disabled:opacity-60 transition-colors">
-                {form1.formState.isSubmitting ? 'Sending…' : 'Send OTP'}
-              </button>
+            <form onSubmit={form1.handleSubmit(onStep1)}>
+              <FieldGroup className="gap-4">
+                <Field>
+                  <FieldLabel htmlFor="crn">Channel Reference Number (CRN)</FieldLabel>
+                  <Input
+                    id="crn"
+                    {...form1.register('crn')}
+                    placeholder="KPT-CP-2025-00142"
+                  />
+                  {form1.formState.errors.crn && (
+                    <p className="mt-1 text-xs text-destructive">{form1.formState.errors.crn.message}</p>
+                  )}
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="mobile">Registered Mobile Number</FieldLabel>
+                  <Input
+                    id="mobile"
+                    {...form1.register('mobile')}
+                    placeholder="9876543210"
+                    maxLength={10}
+                    inputMode="numeric"
+                  />
+                  {form1.formState.errors.mobile && (
+                    <p className="mt-1 text-xs text-destructive">{form1.formState.errors.mobile.message}</p>
+                  )}
+                </Field>
+                <Field>
+                  <Button
+                    type="submit"
+                    disabled={form1.formState.isSubmitting}
+                    className="w-full border-0 bg-primary text-white shadow-sm hover:opacity-90"
+                  >
+                    {form1.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {form1.formState.isSubmitting ? 'Sending…' : 'Send OTP'}
+                    {!form1.formState.isSubmitting && <ArrowRight className="h-4 w-4" />}
+                  </Button>
+                </Field>
+              </FieldGroup>
             </form>
           ) : (
-            <form onSubmit={form2.handleSubmit(onStep2)} className="space-y-4">
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.08em] text-[#6B6B6B] mb-1.5">6-Digit OTP</label>
-                <input {...form2.register('otp')} className={INPUT + ' text-center text-[24px] tracking-[0.3em]'} placeholder="••••••" maxLength={6} inputMode="numeric" />
-                {form2.formState.errors.otp && <p className={ERR}>{form2.formState.errors.otp.message}</p>}
-                {devOtp && <p className="text-[12px] text-[#92400E] bg-[#FFFBEB] border border-[#FCD34D] rounded px-2 py-1 mt-2">Dev mode — OTP: <strong>{devOtp}</strong></p>}
-              </div>
-              <button type="submit" disabled={form2.formState.isSubmitting} className="w-full bg-[#2563EB] text-white text-[14px] font-semibold uppercase tracking-[0.05em] py-3 rounded-[4px] hover:bg-[#1D4ED8] disabled:opacity-60 transition-colors">
-                {form2.formState.isSubmitting ? 'Verifying…' : 'Verify & Login'}
-              </button>
-              <button type="button" onClick={() => { setStep(1); setDevOtp(null); setServerError(null); }} className="w-full text-[13px] text-[#6B6B6B] hover:text-[#2563EB] transition-colors">← Back</button>
+            <form onSubmit={form2.handleSubmit(onStep2)}>
+              <FieldGroup className="gap-4">
+                <Field>
+                  <FieldLabel htmlFor="otp">6-Digit OTP</FieldLabel>
+                  <Input
+                    id="otp"
+                    {...form2.register('otp')}
+                    className="text-center font-mono text-2xl tracking-[0.3em]"
+                    placeholder="••••••"
+                    maxLength={6}
+                    inputMode="numeric"
+                    autoFocus
+                  />
+                  {form2.formState.errors.otp && (
+                    <p className="mt-1 text-xs text-destructive">{form2.formState.errors.otp.message}</p>
+                  )}
+                  {devOtp && (
+                    <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                      Dev mode — OTP: <strong>{devOtp}</strong>
+                    </p>
+                  )}
+                </Field>
+                <Field>
+                  <Button
+                    type="submit"
+                    disabled={form2.formState.isSubmitting}
+                    className="w-full border-0 bg-primary text-white shadow-sm hover:opacity-90"
+                  >
+                    {form2.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {form2.formState.isSubmitting ? 'Verifying…' : 'Verify & Login'}
+                    {!form2.formState.isSubmitting && <ArrowRight className="h-4 w-4" />}
+                  </Button>
+                </Field>
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setDevOtp(null); setServerError(null); }}
+                  className="text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  ← Back
+                </button>
+              </FieldGroup>
             </form>
           )}
 
-          <p className="mt-8 text-center text-[13px] text-[#6B6B6B]">
-            Don't have a CRN yet?{' '}
-            <Link href="/partner/apply" className="text-[#2563EB] hover:underline">Apply now</Link>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Don&apos;t have a CRN yet?{' '}
+            <Link href="/partner/apply" className="text-primary underline-offset-2 hover:underline">
+              Apply now
+            </Link>
           </p>
+
+          <div className="mt-3 text-center text-xs text-muted-foreground">
+            <span>www.kpt.co.in</span>
+          </div>
         </div>
       </div>
+
     </div>
   );
 }

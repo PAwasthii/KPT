@@ -2218,4 +2218,8 @@ export const kptFinanceService = {
     const response = await apiClient.get('/api/kpt/finance/integration/logs');
     return response.data;
   },
+  getIncentives: async (params?: { period?: string; status?: string }) => {
+    const response = await apiClient.get('/api/kpt/finance/incentives', { params });
+    return response.data;
+  },
 };
