@@ -11,7 +11,7 @@ import logo from '@/app/assets/images/logos/kpt-logo.png';
 import BrandPanel from '@/components/BrandPanel';
 import { CrnBadge } from '@/components/kpt/CrnBadge';
 
-export const schema = z.object({
+const schema = z.object({
   ownerName: z.string().min(2, 'Enter owner name'),
   firmName: z.string().min(2, 'Enter firm name'),
   countryCode: z.string().min(1, 'Select country code'),
