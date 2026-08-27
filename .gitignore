@@ -45,3 +45,6 @@ yarn-error.log*
 .DS_Store
 *.pem
 docs/postman/
+
+# Claude Code local config (contains credentials)
+.claude/
