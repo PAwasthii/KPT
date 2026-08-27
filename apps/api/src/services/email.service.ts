@@ -918,3 +918,46 @@ class EmailService {
 
 // Export singleton instance
 export const emailService = new EmailService();
+
+/** Returns config status + sends a real test email. Remove after debugging. */
+export async function debugEmailConfig(toEmail: string): Promise<Record<string, unknown>> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  const transport = smtpHost && smtpUser && smtpPass ? 'SMTP'
+    : apiKey ? 'Resend'
+    : 'NONE';
+
+  const config = {
+    transport,
+    resend_api_key_set: !!apiKey,
+    resend_api_key_prefix: apiKey ? apiKey.slice(0, 8) + '...' : null,
+    resend_from_email: fromEmail || null,
+    smtp_host: smtpHost || null,
+    smtp_user: smtpUser || null,
+  };
+
+  if (transport === 'NONE') return { ...config, sent: false, error: 'No transport configured' };
+
+  try {
+    if (transport === 'Resend') {
+      const resend = new Resend(apiKey!);
+      const { data, error } = await resend.emails.send({
+        from: `KPT Debug <${fromEmail}>`,
+        to: toEmail,
+        subject: 'KPT Email Debug Test',
+        text: 'If you receive this, Resend is working correctly on Render.',
+      } as Parameters<typeof resend.emails.send>[0]);
+      if (error) return { ...config, sent: false, resend_error: { name: (error as {name:string}).name, message: (error as {message:string}).message, statusCode: (error as {statusCode?:number}).statusCode } };
+      return { ...config, sent: true, resend_id: data?.id };
+    }
+    // SMTP path
+    const sent = await emailService.sendEmail({ to: toEmail, subject: 'KPT Email Debug Test', text: 'SMTP working on Render.' });
+    return { ...config, sent };
+  } catch (err) {
+    return { ...config, sent: false, exception: err instanceof Error ? err.message : String(err) };
+  }
+}

@@ -508,14 +508,17 @@ export class AuthController {
 
       const emailSent = await emailService.sendLoginOtpEmail(normalizedEmail, name, otp);
       if (!emailSent) {
-        const fromDomain = (process.env.RESEND_FROM_EMAIL || '').split('@')[1] ?? '';
-        const hint = fromDomain
-          ? `The sending domain "${fromDomain}" may not be verified in Resend. Visit https://resend.com/domains to verify it.`
-          : 'RESEND_FROM_EMAIL is not configured.';
+        const apiKeySet = !!process.env.RESEND_API_KEY;
+        const fromEmail = process.env.RESEND_FROM_EMAIL || '';
+        const fromDomain = fromEmail.split('@')[1] ?? '';
+        const hint = !apiKeySet ? 'RESEND_API_KEY not set'
+          : !fromEmail ? 'RESEND_FROM_EMAIL not set'
+          : `Resend rejected send from "${fromEmail}" — check domain "${fromDomain}" is verified at resend.com/domains and the API key belongs to the same account`;
         console.error(`[Auth.sendOtpLogin] Email delivery failed — ${hint}`);
         return res.status(503).json({
           success: false,
           error: 'OTP could not be delivered. Email is not configured correctly — please contact your administrator.',
+          _debug: hint,
         });
       }
 

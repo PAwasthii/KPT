@@ -41,8 +41,17 @@ import auditLogRoutes from './auditLogs.routes.js';
 import gstRoutes from './gst.routes.js';
 import taxVerifyRoutes from './taxVerify.routes.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
+import { debugEmailConfig } from '../services/email.service.js';
 
 export function setupRoutes(app: Express) {
+  // Email debug — POST /api/debug/email?to=you@example.com
+  app.post('/api/debug/email', async (req, res) => {
+    const to = (req.query.to as string) || (req.body?.to as string);
+    if (!to) return res.status(400).json({ error: 'Pass ?to=your@email.com' });
+    const result = await debugEmailConfig(to);
+    return res.json(result);
+  });
+
   // Health check
   app.get("/health", async (req, res) => {
     try {
