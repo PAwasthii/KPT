@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
-export default function Page({ params }: { params: { crn: string } }) {
-  redirect(`/partner-applications/${params.crn}`);
+export default async function Page({ params }: { params: Promise<{ crn: string }> }) {
+  const { crn } = await params;
+  redirect(`/partner-applications/${crn}`);
 }
