@@ -10,7 +10,7 @@ import { ArrowLeft, Phone, Building2, CheckCircle, XCircle } from "lucide-react"
 import { Lead } from "../lib/api/types"
 import { toast } from "sonner"
 import Image from "next/image"
-import logo from '../app/assets/images/logos/logo_v1.png'
+import logo from '../app/assets/images/logos/kpt-logo.png'
 import { getLeadFullName } from "../lib/name"
 import { displayPhone } from "../lib/phone-formatter"
 

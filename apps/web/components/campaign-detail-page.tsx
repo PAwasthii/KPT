@@ -9,7 +9,7 @@ import { ArrowLeft, Download, FileText, Edit, RefreshCw, FileSpreadsheet, Table 
 import { Campaign } from "./campaign-table"
 import { type CampaignDelivery, type AnalyticsEvent, type BrevoCampaign, type MessageTemplate } from "@/lib/api/types"
 import { generateCampaignPDF } from "@/lib/utils/pdf-generator"
-import logo from '@/app/assets/images/logos/logo_v1.png'
+import logo from '@/app/assets/images/logos/kpt-logo.png'
 import { WhatsAppPreview } from "./whatsapp/whatsapp-preview"
 
 interface CampaignDetailPageProps {

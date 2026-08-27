@@ -15,7 +15,7 @@ import {
 } from "@repo/ui/components/ui/field";
 import { Input } from "@repo/ui/components/ui/input";
 import Image from 'next/image';
-import logo from '../app/assets/images/logos/logo_v1.png';
+import logo from '../app/assets/images/logos/kpt-logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { validateEmail, validateName } from '../lib/validation';
 

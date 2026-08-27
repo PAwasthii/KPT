@@ -9,7 +9,7 @@ import { Button } from "@repo/ui/components/ui/button";
 import { Input } from "@repo/ui/components/ui/input";
 import { Label } from "@repo/ui/components/ui/label";
 import { Loader2, ArrowRight } from "lucide-react";
-import logov3 from "@/app/assets/images/logos/logo_v1.png";
+import logov3 from "@/app/assets/images/logos/kpt-logo.png";
 import { aakramanService } from "@/lib/api/services";
 
 const emailSchema = z.string().email("Enter a valid email address");

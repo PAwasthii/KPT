@@ -9,7 +9,7 @@ import { salesService } from "@/lib/api/services"
 import { Lead, Enquiry } from "@/lib/api/types"
 import { getLeadFullName } from "@/lib/name"
 import Image from "next/image"
-import logo from '@/app/assets/images/logos/logo_v1.png'
+import logo from '@/app/assets/images/logos/kpt-logo.png'
 import { Badge } from "@repo/ui"
 
 interface LeadWithRemarks extends Lead {

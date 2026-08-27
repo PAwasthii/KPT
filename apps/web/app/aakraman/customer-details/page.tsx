@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/ui/select";
 import { Loader2, Search, User, LogOut } from "lucide-react";
-import logov3 from "@/app/assets/images/logos/logo_v1.png";
+import logov3 from "@/app/assets/images/logos/kpt-logo.png";
 import { aakramanService, AakramanOrderFirmDetails } from "@/lib/api/services";
 
 // Zod schema for customer details validation
