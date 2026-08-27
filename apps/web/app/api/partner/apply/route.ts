@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ crn, message: 'Application submitted successfully' });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: err.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Validation failed', details: err.issues }, { status: 400 });
     }
     console.error('[partner/apply]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

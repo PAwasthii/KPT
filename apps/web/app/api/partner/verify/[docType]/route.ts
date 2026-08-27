@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ doc
       where: { id: documentId },
       data: {
         verifyStatus,
-        verifyPayload: result.data ? (result.data as Record<string, unknown>) : undefined,
+        verifyPayload: result.data ? JSON.parse(JSON.stringify(result.data)) : undefined,
         failReason: verifyStatus === 'failed' ? result.message : undefined,
         verifiedAt: verifyStatus === 'verified' ? new Date() : undefined,
       },

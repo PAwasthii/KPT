@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const { partner } = usePartnerAuth();
   if (!partner) return null;
 
-  const stage = STAGE_INFO.find(s => s.n === partner.currentStage) ?? STAGE_INFO[0];
+  const stage = STAGE_INFO.find(s => s.n === partner.currentStage) ?? STAGE_INFO[0]!;
 
   return (
     <div className="p-6 max-w-5xl">

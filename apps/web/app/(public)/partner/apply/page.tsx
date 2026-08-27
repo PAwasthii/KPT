@@ -82,7 +82,7 @@ export default function ApplyPage() {
       const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
       const data = await res.json() as Array<{ Status: string; PostOffice: Array<{ District: string }> }>;
       if (data[0]?.Status === 'Success' && data[0].PostOffice?.length) {
-        setValue('district', data[0].PostOffice[0].District, { shouldValidate: true });
+        setValue('district', data[0].PostOffice[0]?.District ?? '', { shouldValidate: true });
       }
     } catch { /* ignore */ } finally { setPincodeLoading(false); }
   };

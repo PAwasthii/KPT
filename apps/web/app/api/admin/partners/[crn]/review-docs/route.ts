@@ -74,9 +74,9 @@ export async function POST(
         crn,
         ownerName: partner.ownerName,
         firmName: partner.firmName,
-        city: partner.city,
-        district: partner.district,
-        state: partner.state,
+        city: partner.city ?? '',
+        district: partner.district ?? '',
+        state: partner.state ?? '',
         pincode: partner.pincode,
         productInterest: partner.productInterest,
       });

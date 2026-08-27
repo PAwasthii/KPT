@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ crn
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    if (err instanceof z.ZodError) return NextResponse.json({ error: 'Invalid input', details: err.errors }, { status: 400 });
+    if (err instanceof z.ZodError) return NextResponse.json({ error: 'Invalid input', details: err.issues }, { status: 400 });
     console.error('[schedule-visit]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

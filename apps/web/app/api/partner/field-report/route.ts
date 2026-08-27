@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    if (err instanceof z.ZodError) return NextResponse.json({ error: 'Invalid input', details: err.errors }, { status: 400 });
+    if (err instanceof z.ZodError) return NextResponse.json({ error: 'Invalid input', details: err.issues }, { status: 400 });
     console.error('[partner/field-report]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
