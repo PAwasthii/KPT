@@ -62,18 +62,10 @@ services:
       - key: MSG91_OTP_TEMPLATE_ID
         sync: false
 
-      # Plunk email
-      - key: PLUNK_API_KEY
+      # Resend email (transactional: OTP, user creation, approvals, quotes)
+      - key: RESEND_API_KEY
         sync: false
-      - key: PLUNK_FROM_EMAIL
-        sync: false
-      - key: PLUNK_FROM_NAME
-        sync: false
-
-      # Brevo email
-      - key: BREVO_BASE_URL
-        sync: false
-      - key: BREVO_WEBHOOK_SECRET
+      - key: RESEND_FROM_EMAIL
         sync: false
 
       # GST validation
