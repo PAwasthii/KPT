@@ -67,6 +67,7 @@ export async function GET(
     agreement: partner.agreement
       ? {
           signStatus: partner.agreement.signStatus,
+          signingUrl: partner.agreement.signingUrl,
           signedAt: partner.agreement.signedAt,
           activatedAt: partner.agreement.activatedAt,
         }

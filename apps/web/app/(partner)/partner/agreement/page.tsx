@@ -1,6 +1,12 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { usePartnerAuth } from '@/contexts/PartnerAuthContext';
+
+interface AgreementData {
+  signStatus: string | null;
+  signingUrl: string | null;
+  signedAt: string | null;
+}
 
 const CLAUSES = [
   {
@@ -96,23 +102,41 @@ const CLAUSES = [
   },
 ];
 
-type SignStep = 'read' | 'aadhaar' | 'otp' | 'signed';
-
 export default function AgreementPage() {
   const { partner, refresh } = usePartnerAuth();
   const agreementRef = useRef<HTMLDivElement>(null);
 
-  const [step, setStep] = useState<SignStep>('read');
   const [hasScrolled, setHasScrolled] = useState(false);
-  const [aadhaar, setAadhaar] = useState('');
-  const [aadhaarMasked, setAadhaarMasked] = useState('');
-  const [consentChecked, setConsentChecked] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [sending, setSending] = useState(false);
-  const [signing, setSigning] = useState(false);
-  const [error, setError] = useState('');
+  const [agreement, setAgreement] = useState<AgreementData | null>(null);
+  const [agreementLoading, setAgreementLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!partner) return;
+    fetch('/api/partner/agreement', { credentials: 'include' })
+      .then(r => r.json())
+      .then((data: AgreementData | null) => setAgreement(data))
+      .catch(() => setAgreement(null))
+      .finally(() => setAgreementLoading(false));
+  }, [partner]);
+
+  const handleRefreshStatus = async () => {
+    setRefreshing(true);
+    await refresh();
+    try {
+      const res = await fetch('/api/partner/agreement', { credentials: 'include' });
+      const data = await res.json() as AgreementData | null;
+      setAgreement(data);
+    } catch { /* ignore */ }
+    setRefreshing(false);
+  };
 
   if (!partner) return null;
+  if (agreementLoading) return (
+    <div className="flex items-center justify-center h-40">
+      <div className="w-7 h-7 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   // Stage < 5 — locked
   if (partner.currentStage < 5) {
@@ -134,7 +158,7 @@ export default function AgreementPage() {
   }
 
   // Stage 5 — already signed / active
-  if (step === 'signed' || partner.status === 'active') {
+  if (agreement?.signStatus === 'signed' || partner.status === 'active') {
     return (
       <div className="p-6 max-w-2xl">
         <h1 className="text-[22px] font-bold text-slate-800 mb-6">Dealer Agreement</h1>
@@ -154,7 +178,7 @@ export default function AgreementPage() {
               </div>
               <div>
                 <p className="text-[11px] uppercase tracking-[0.06em] text-[#6B6B6B] mb-0.5">Signing Method</p>
-                <p className="text-[#2D2D2D]">Aadhaar eSign (UIDAI)</p>
+                <p className="text-[#2D2D2D]">Digio eSign</p>
               </div>
               <div>
                 <p className="text-[11px] uppercase tracking-[0.06em] text-[#6B6B6B] mb-0.5">Firm Name</p>
@@ -178,60 +202,13 @@ export default function AgreementPage() {
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) setHasScrolled(true);
   };
 
-  const handleSendOtp = async () => {
-    if (aadhaar.replace(/\s/g, '').length !== 12) {
-      setError('Please enter a valid 12-digit Aadhaar number.');
-      return;
-    }
-    if (!consentChecked) {
-      setError('You must provide consent to proceed.');
-      return;
-    }
-    setError('');
-    setSending(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setSending(false);
-    const last4 = aadhaar.replace(/\s/g, '').slice(-4);
-    setAadhaarMasked(`XXXX XXXX ${last4}`);
-    setStep('otp');
-  };
-
-  const handleSign = async () => {
-    if (otp.length !== 6) { setError('Please enter the 6-digit OTP.'); return; }
-    if (otp !== '123456') { setError('Invalid OTP. (Dev mode OTP: 123456)'); return; }
-    setError('');
-    setSigning(true);
-    try {
-      const res = await fetch('/api/webhooks/esign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference_id: `MOCK-ESIGN-${partner.crn}-0`, status: 'signed' }),
-      });
-      if (res.ok) {
-        await refresh();
-        setStep('signed');
-      } else {
-        setError('Signing failed. Please try again.');
-      }
-    } catch {
-      setError('Network error. Please try again.');
-    } finally {
-      setSigning(false);
-    }
-  };
-
-  const formatAadhaar = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 12);
-    return digits.replace(/(\d{4})(\d{0,4})(\d{0,4})/, (_, a, b, c) => [a, b, c].filter(Boolean).join(' '));
-  };
-
   return (
     <div className="p-6 max-w-3xl">
       {/* Header */}
       <div className="mb-6">
         <p className="text-[11px] uppercase tracking-[0.08em] text-[#6B6B6B] mb-1">Stage 5 of 5</p>
         <h1 className="text-[22px] font-bold text-slate-800">Dealer Agreement</h1>
-        <p className="text-[13px] text-[#6B6B6B] mt-0.5">Read the full agreement below, then sign digitally using Aadhaar eSign.</p>
+        <p className="text-[13px] text-[#6B6B6B] mt-0.5">Read the full agreement below, then sign digitally via Digio eSign.</p>
       </div>
 
       {/* Agreement metadata */}
@@ -334,7 +311,7 @@ export default function AgreementPage() {
                 <p className="text-[#6B6B6B] mb-1">For and on behalf of the Dealer</p>
                 <p className="font-semibold">{partner.firmName}</p>
                 <p>{partner.ownerName} (Proprietor/Authorised Signatory)</p>
-                <p className="text-[#6B6B6B] mt-2">Signature: Aadhaar eSign (UIDAI)</p>
+                <p className="text-[#6B6B6B] mt-2">Signature: Digio eSign</p>
                 <p className="text-[#6B6B6B]">Date: {new Date().toLocaleDateString('en-IN')}</p>
               </div>
               <div className="border border-[#E8E8E6] rounded p-3">
@@ -350,139 +327,48 @@ export default function AgreementPage() {
       </div>
 
       {/* eSign panel */}
-      {step === 'read' && (
-        <div className={`bg-white border rounded-[8px] p-5 transition-all ${hasScrolled ? 'border-[#2563EB]' : 'border-[#E8E8E6] opacity-60'}`}>
-          <p className="text-[14px] font-semibold text-slate-800 mb-1">Sign with Aadhaar eSign</p>
-          <p className="text-[13px] text-[#6B6B6B] mb-4">
-            {hasScrolled
-              ? 'You have read the agreement. Proceed to sign digitally using your Aadhaar-linked mobile OTP (powered by UIDAI).'
-              : 'Scroll through the full agreement above before signing.'}
-          </p>
-          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-[6px] p-3 mb-4 flex items-start gap-2.5">
-            <svg className="w-4 h-4 text-[#2563EB] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-            </svg>
-            <p className="text-[12px] text-[#1E40AF]">Aadhaar eSign is a legally valid digital signature under IT Act 2000 and the Aadhaar Act 2016. Your Aadhaar number is used only for OTP authentication and is not stored.</p>
+      <div className={`bg-white border rounded-[8px] p-5 transition-all ${hasScrolled ? 'border-[#2563EB]' : 'border-[#E8E8E6] opacity-60'}`}>
+        <p className="text-[14px] font-semibold text-slate-800 mb-1">Sign with Digio eSign</p>
+
+        {!agreement?.signingUrl ? (
+          <div className="bg-[#FFFBEB] border border-[#FCD34D] rounded-[6px] px-4 py-3">
+            <p className="text-[13px] text-[#92400E] font-medium mb-0.5">Agreement not yet sent for signing</p>
+            <p className="text-[12px] text-[#92400E]">KPT will send the signing link to your email once the agreement is dispatched. You will receive an email from Digio with instructions.</p>
           </div>
-          <button
-            disabled={!hasScrolled}
-            onClick={() => setStep('aadhaar')}
-            className="w-full bg-[#2563EB] text-white text-[14px] font-semibold uppercase tracking-[0.05em] py-3 rounded-[4px] hover:bg-[#1D4ED8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Proceed to Sign with Aadhaar eSign →
-          </button>
-        </div>
-      )}
-
-      {/* Step: Aadhaar input */}
-      {step === 'aadhaar' && (
-        <div className="bg-white border border-[#2563EB] rounded-[8px] p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 bg-[#2563EB] text-white rounded-full flex items-center justify-center text-[12px] font-bold">1</div>
-            <p className="text-[15px] font-semibold text-slate-800">Enter Aadhaar Number</p>
-          </div>
-
-          <div className="bg-[#FFFBEB] border border-[#FCD34D] rounded-[6px] px-3 py-2 mb-4">
-            <p className="text-[12px] text-[#92400E]">Dev environment — use any 12-digit number. OTP will be <strong>123456</strong>.</p>
-          </div>
-
-          <label className="block text-[12px] font-medium text-[#2D2D2D] mb-1.5">Aadhaar Number</label>
-          <input
-            value={aadhaar}
-            onChange={e => setAadhaar(formatAadhaar(e.target.value))}
-            placeholder="XXXX XXXX XXXX"
-            maxLength={14}
-            className="w-full border border-[#E8E8E6] rounded-[4px] px-4 py-3 text-[18px] font-mono tracking-[0.2em] focus:outline-none focus:border-[#2563EB] mb-4"
-          />
-
-          <label className="flex items-start gap-2.5 cursor-pointer mb-4">
-            <input
-              type="checkbox"
-              checked={consentChecked}
-              onChange={e => setConsentChecked(e.target.checked)}
-              className="mt-0.5 accent-[#2563EB]"
-            />
-            <span className="text-[12px] text-[#2D2D2D] leading-relaxed">
-              I consent to the use of my Aadhaar number for OTP-based digital signing. I have read and agree to all terms of the KPT Authorised Channel Partner Agreement, including the blacklisting policy under Clause 9.
-            </span>
-          </label>
-
-          {error && <p className="text-[12px] text-red-600 mb-3">{error}</p>}
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => { setStep('read'); setError(''); }}
-              className="flex-1 border border-[#E8E8E6] text-[#6B6B6B] text-[13px] py-2.5 rounded-[4px] hover:border-[#2D2D2D]"
+        ) : (
+          <>
+            <p className="text-[13px] text-[#6B6B6B] mb-4">
+              {hasScrolled
+                ? 'You have read the agreement. Click below to open the Digio signing portal — you will receive an email link from Digio as well.'
+                : 'Scroll through the full agreement above before signing.'}
+            </p>
+            <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-[6px] p-3 mb-4 flex items-start gap-2.5">
+              <svg className="w-4 h-4 text-[#2563EB] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+              <p className="text-[12px] text-[#1E40AF]">Digio eSign is a legally valid electronic signature under the IT Act 2000. Clicking the link below will open the Digio portal where you can review and sign the agreement.</p>
+            </div>
+            <a
+              href={agreement.signingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`block w-full text-center bg-[#2563EB] text-white text-[14px] font-semibold uppercase tracking-[0.05em] py-3 rounded-[4px] hover:bg-[#1D4ED8] transition-colors ${!hasScrolled ? 'pointer-events-none opacity-40' : ''}`}
             >
-              Back
-            </button>
-            <button
-              onClick={handleSendOtp}
-              disabled={sending || aadhaar.replace(/\s/g, '').length !== 12 || !consentChecked}
-              className="flex-[2] bg-[#2563EB] text-white text-[13px] font-semibold py-2.5 rounded-[4px] hover:bg-[#1D4ED8] disabled:opacity-50 transition-colors"
-            >
-              {sending ? 'Sending OTP…' : 'Send OTP to Aadhaar-Linked Mobile'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step: OTP */}
-      {step === 'otp' && (
-        <div className="bg-white border border-[#2563EB] rounded-[8px] p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 bg-[#2563EB] text-white rounded-full flex items-center justify-center text-[12px] font-bold">2</div>
-            <p className="text-[15px] font-semibold text-slate-800">Enter OTP</p>
-          </div>
-
-          <div className="flex items-center gap-2 bg-[#ECFDF5] border border-[#A7F3D0] rounded-[6px] px-3 py-2.5 mb-4">
-            <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3" />
-            </svg>
-            <p className="text-[12px] text-emerald-800">OTP sent to your Aadhaar-linked mobile ending in <strong>XXXXXX{aadhaar.replace(/\s/g, '').slice(-2)}</strong>. Aadhaar: <strong>{aadhaarMasked}</strong></p>
-          </div>
-
-          <div className="bg-[#FFFBEB] border border-[#FCD34D] rounded-[6px] px-3 py-2 mb-4">
-            <p className="text-[12px] text-[#92400E]">Dev mode OTP: <strong>123456</strong></p>
-          </div>
-
-          <label className="block text-[12px] font-medium text-[#2D2D2D] mb-1.5">6-Digit OTP</label>
-          <input
-            value={otp}
-            onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="••••••"
-            maxLength={6}
-            className="w-full border border-[#E8E8E6] rounded-[4px] px-4 py-3 text-[24px] text-center font-mono tracking-[0.4em] focus:outline-none focus:border-[#2563EB] mb-4"
-          />
-
-          {error && <p className="text-[12px] text-red-600 mb-3">{error}</p>}
-
-          <p className="text-[12px] text-[#6B6B6B] mb-4">
-            OTP valid for 10 minutes.{' '}
-            <button onClick={() => { setOtp(''); setStep('aadhaar'); }} className="text-[#2563EB] hover:underline">Change Aadhaar</button>
-          </p>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => { setStep('aadhaar'); setError(''); setOtp(''); }}
-              className="flex-1 border border-[#E8E8E6] text-[#6B6B6B] text-[13px] py-2.5 rounded-[4px] hover:border-[#2D2D2D]"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleSign}
-              disabled={signing || otp.length !== 6}
-              className="flex-[2] bg-emerald-700 text-white text-[13px] font-semibold py-2.5 rounded-[4px] hover:bg-emerald-800 disabled:opacity-50 transition-colors"
-            >
-              {signing ? 'Signing Agreement…' : 'Verify OTP & Sign Agreement'}
-            </button>
-          </div>
-
-          <p className="text-[11px] text-[#9CA3AF] mt-4 text-center">
-            By proceeding, you confirm that this digital signature is legally binding under the Information Technology Act, 2000 and constitutes your acceptance of the full Agreement.
-          </p>
-        </div>
-      )}
+              Open Digio Signing Portal →
+            </a>
+            <div className="mt-4 pt-4 border-t border-[#E8E8E6] flex items-center justify-between">
+              <p className="text-[12px] text-[#6B6B6B]">Already signed on Digio? Refresh to see updated status.</p>
+              <button
+                onClick={handleRefreshStatus}
+                disabled={refreshing}
+                className="text-[12px] text-[#2563EB] hover:underline disabled:opacity-50"
+              >
+                {refreshing ? 'Checking…' : 'Refresh status'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

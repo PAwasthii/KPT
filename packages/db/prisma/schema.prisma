@@ -1733,6 +1733,7 @@ model KptAgreement {
   crn           String    @unique
   agreementPath String?   @map("agreement_path")
   esignRef      String?   @map("esign_ref")
+  signingUrl    String?   @map("signing_url")
   signStatus    String    @default("pending") @map("sign_status")
   signedAt      DateTime? @map("signed_at")
   activatedAt   DateTime? @map("activated_at")

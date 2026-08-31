@@ -6,6 +6,7 @@ import { generateKptAgreement } from '@/lib/kpt/agreement';
 import { sendSMS } from '@/lib/kpt/sms';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/lib/kpt/adminAuth';
+import { createDigioRequest } from '@/lib/kpt/digio';
 
 const schema = z.object({
   action: z.enum(['approve', 'reject', 'more_info']),
@@ -30,10 +31,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ crn
     if (action === 'approve') {
       const agreementPath = `agreements/${crn}/dealer-agreement.pdf`;
 
-      // Generate + upload PDF — non-fatal; approval proceeds even if this fails
+      let pdfBuffer: Buffer | null = null;
+      let esignRef = `MOCK-ESIGN-${crn}-0`;
+      let signingUrl: string | null = null;
+
+      // Generate + upload PDF — non-fatal
       try {
         const gstnDoc = partner.documents.find(d => d.docType === 'gstin');
-        const pdfBuffer = await generateKptAgreement({
+        pdfBuffer = await generateKptAgreement({
           crn,
           ownerName: partner.ownerName,
           firmName: partner.firmName,
@@ -55,16 +60,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ crn
         console.error('[admin/partners/approve] PDF generation failed (non-fatal):', pdfErr);
       }
 
-      // In production this ref comes from the e-sign provider (Leegality etc.)
-      // For now use a deterministic value the mock signing flow can match
-      const esignRef = `MOCK-ESIGN-${crn}-0`;
+      // Send to Digio for e-signing — non-fatal
+      if (pdfBuffer && process.env.DIGIO_CLIENT_ID && process.env.DIGIO_CLIENT_SECRET) {
+        try {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+          const digio = await createDigioRequest(
+            pdfBuffer,
+            `KPT-Dealer-Agreement-${crn}.pdf`,
+            partner.email,
+            partner.ownerName,
+            `${appUrl}/api/webhooks/esign`,
+          );
+          esignRef = digio.id;
+          signingUrl = digio.signing_parties[0]?.sign_link ?? null;
+        } catch (digioErr) {
+          console.error('[admin/partners/approve] Digio failed (non-fatal):', digioErr);
+        }
+      }
 
       await prisma.$transaction([
         prisma.kptPartner.update({ where: { crn }, data: { currentStage: 5, status: 'approved' } }),
         prisma.kptAgreement.upsert({
           where: { crn },
-          create: { crn, agreementPath, signStatus: 'sent', esignRef },
-          update: { agreementPath, signStatus: 'sent', esignRef },
+          create: { crn, agreementPath, signStatus: 'sent', esignRef, signingUrl },
+          update: { agreementPath, signStatus: 'sent', esignRef, signingUrl },
         }),
         prisma.kptStatusHistory.create({ data: { crn, fromStatus: partner.status, toStatus: 'approved', note: notes } }),
         prisma.kptApprovalLog.create({ data: { crn, action: 'approved', doneBy: adminId, doneByName: adminName, notes } }),

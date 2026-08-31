@@ -83,13 +83,13 @@ async function main() {
     });
   }
 
-  // Agreement — sent, awaiting partner signature
+  // Agreement — generated but not yet sent for signing
   await prisma.kptAgreement.create({
     data: {
       crn: CRN,
       agreementPath: `agreements/${CRN}/dealer-agreement.pdf`,
       esignRef: ESIGN_REF,
-      signStatus: 'sent',
+      signStatus: 'pending',
     },
   });
 

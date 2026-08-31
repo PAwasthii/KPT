@@ -39,7 +39,7 @@ interface PartnerDetail {
   documents: DocItem[];
   approvalLogs: ApprovalLog[];
   statusHistory: StatusHistory[];
-  agreement: { signStatus: string; signedAt: string | null; activatedAt: string | null } | null;
+  agreement: { signStatus: string; signingUrl: string | null; signedAt: string | null; activatedAt: string | null } | null;
 }
 
 const DOC_LABELS: Record<string, string> = {
@@ -98,6 +98,8 @@ export default function PartnerDetailPage() {
   const [rejectOpen, setRejectOpen] = useState<Record<string, boolean>>({});
   const [approveAllLoading, setApproveAllLoading] = useState(false);
   const [approveAllResult, setApproveAllResult] = useState<string | null>(null);
+  const [sendSigningLoading, setSendSigningLoading] = useState(false);
+  const [sendSigningResult, setSendSigningResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isSystemAdmin) router.replace('/unauthorized');
@@ -161,6 +163,21 @@ export default function PartnerDetailPage() {
         setApproveAllResult(data.error ?? 'Failed to approve');
       }
     } finally { setApproveAllLoading(false); }
+  };
+
+  const handleSendForSigning = async () => {
+    setSendSigningLoading(true);
+    setSendSigningResult(null);
+    try {
+      const res = await fetch(`/api/admin/partners/${crn}/send-for-signing`, { method: 'POST' });
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (data.ok) {
+        setSendSigningResult('Agreement sent to partner via Digio. They will receive an email with the signing link.');
+        await fetchPartner();
+      } else {
+        setSendSigningResult(data.error ?? 'Failed to send');
+      }
+    } finally { setSendSigningLoading(false); }
   };
 
   const fmt = (d: string | null) => d ? new Date(d).toLocaleString('en-IN') : '—';
@@ -414,16 +431,37 @@ export default function PartnerDetailPage() {
                     </div>
                   )}
 
-                  {/* Stage 5: show agreement status */}
+                  {/* Stage 5: agreement status + actions */}
                   {partner.currentStage === 5 && partner.agreement && (
-                    <div className={`border rounded-[6px] p-4 ${partner.agreement.signStatus === 'signed' ? 'border-emerald-200 bg-emerald-50' : 'border-blue-200 bg-blue-50'}`}>
+                    <div className={`border rounded-[6px] p-4 ${partner.agreement.signStatus === 'signed' ? 'border-emerald-200 bg-emerald-50' : partner.agreement.signStatus === 'sent' ? 'border-blue-200 bg-blue-50' : 'border-amber-200 bg-amber-50'}`}>
                       <p className="text-[13px] font-semibold text-[#2D2D2D] mb-1">
-                        Agreement Status: <span className={partner.agreement.signStatus === 'signed' ? 'text-emerald-700' : 'text-blue-700'}>
-                          {partner.agreement.signStatus === 'signed' ? 'Signed' : 'Sent — Awaiting Partner Signature'}
+                        Agreement Status:{' '}
+                        <span className={partner.agreement.signStatus === 'signed' ? 'text-emerald-700' : partner.agreement.signStatus === 'sent' ? 'text-blue-700' : 'text-amber-700'}>
+                          {partner.agreement.signStatus === 'signed' ? 'Signed' : partner.agreement.signStatus === 'sent' ? 'Sent — Awaiting Partner Signature' : 'Pending — Not Yet Sent'}
                         </span>
                       </p>
                       {partner.agreement.signedAt && (
                         <p className="text-[12px] text-[#6B6B6B]">Signed on: {fmt(partner.agreement.signedAt)}</p>
+                      )}
+                      {partner.agreement.signingUrl && partner.agreement.signStatus !== 'signed' && (
+                        <a href={partner.agreement.signingUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-[12px] text-[#2563EB] hover:underline mt-1 inline-block">
+                          View Digio signing link ↗
+                        </a>
+                      )}
+                      {sendSigningResult && (
+                        <p className={`text-[12px] mt-2 px-2 py-1.5 rounded ${sendSigningResult.includes('sent') ? 'bg-emerald-100 text-emerald-800' : 'bg-red-50 text-red-700'}`}>
+                          {sendSigningResult}
+                        </p>
+                      )}
+                      {partner.agreement.signStatus === 'pending' && (
+                        <button
+                          onClick={handleSendForSigning}
+                          disabled={sendSigningLoading}
+                          className="mt-3 w-full bg-[#2563EB] text-white text-[13px] font-semibold py-2.5 rounded-[4px] hover:bg-[#1D4ED8] disabled:opacity-50 transition-colors"
+                        >
+                          {sendSigningLoading ? 'Sending…' : 'Send Agreement via Digio →'}
+                        </button>
                       )}
                     </div>
                   )}
