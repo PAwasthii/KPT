@@ -912,7 +912,23 @@ class EmailService {
     `;
 
     const html = this.generateBrandedEmailTemplate('KPT Login Verification Code', content, true);
-    return this.sendEmail({ to: email, subject, html });
+    const text = [
+      `KPT Partner Portal — Login Verification Code`,
+      ``,
+      `Hi ${name || 'there'},`,
+      ``,
+      `Your one-time login code is:`,
+      ``,
+      `  ${otp}`,
+      ``,
+      `This code expires in 10 minutes.`,
+      ``,
+      `Never share this code with anyone, including KPT staff.`,
+      `If you did not request this code, you can safely ignore this email.`,
+      ``,
+      `— KPT Partner Portal Team`,
+    ].join('\n');
+    return this.sendEmail({ to: email, subject, html, text });
   }
 }
 
