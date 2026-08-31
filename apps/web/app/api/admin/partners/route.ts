@@ -17,7 +17,12 @@ export async function GET(req: NextRequest) {
 
   const where: Record<string, unknown> = {};
   if (stage) where.currentStage = parseInt(stage);
-  if (status) where.status = status;
+  // Activated partners leave this pipeline and live in the channel-partner list
+  if (status) {
+    where.status = status;
+  } else {
+    where.status = { notIn: ['active', 'activated'] };
+  }
   if (city) where.city = { contains: city, mode: 'insensitive' };
   if (search) {
     where.OR = [

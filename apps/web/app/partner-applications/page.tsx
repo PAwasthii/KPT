@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useIsSystemAdmin } from '@/components/guards/RoleGuard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/kpt/StatusBadge';
 import { useActivatePartner } from '@/hooks/useKpt';
 import { Card, CardContent } from '@repo/ui/components/ui/card';
 import { Button } from '@repo/ui/components/ui/button';
+import { RefreshCw, CheckCircle2, X } from 'lucide-react';
 
 interface Partner {
   id: string; crn: string; ownerName: string; firmName: string; mobile: string; email: string;
@@ -71,6 +72,15 @@ export default function PartnerApplicationsPage() {
   const [actCode, setActCode] = useState('');
   const [actError, setActError] = useState('');
   const [actSuccess, setActSuccess] = useState('');
+
+  // Toast notification
+  const [toast, setToast] = useState<{ message: string } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = (message: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ message });
+    toastTimer.current = setTimeout(() => setToast(null), 6000);
+  };
 
   useEffect(() => {
     if (!authLoading && !isSystemAdmin) router.replace('/unauthorized');
@@ -140,14 +150,19 @@ export default function PartnerApplicationsPage() {
   const submitActivate = async () => {
     if (!activateModal) return;
     setActError(''); setActSuccess('');
+    const { crn, firmName } = activateModal;
     activateMutation.mutate(
-      { crn: activateModal.crn, data: { type: actType, tier: actTier, region: actRegion.trim() || undefined, targetAmount: actTarget ? Number(actTarget) : undefined, code: actCode.trim() || undefined } },
+      { crn, data: { type: actType, tier: actTier, region: actRegion.trim() || undefined, targetAmount: actTarget ? Number(actTarget) : undefined, code: actCode.trim() || undefined } },
       {
         onSuccess: (result: any) => {
           if (result?.success) {
-            setActSuccess(`Channel Partner created: ${result.data?.code ?? activateModal.crn}`);
-            fetchData();
-            setTimeout(() => setActivateModal(null), 2000);
+            const code = result.data?.code ?? crn;
+            // Remove partner from list immediately
+            setPartners(prev => prev.filter(p => p.crn !== crn));
+            setActivateModal(null);
+            // Refresh stats without re-fetching partner list
+            fetch('/api/admin/stats').then(r => r.ok ? r.json() : null).then(d => { if (d) setStats(d as Stats); });
+            showToast(`${firmName} successfully activated as Channel Partner ${code}. They now appear in the Partner List.`);
           } else {
             setActError(result?.error ?? 'Activation failed');
           }
@@ -170,6 +185,17 @@ export default function PartnerApplicationsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Activation success toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-[100] flex items-start gap-3 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-xl max-w-sm animate-in slide-in-from-top-2">
+          <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+          <p className="text-sm font-medium leading-snug">{toast.message}</p>
+          <button onClick={() => setToast(null)} className="ml-auto shrink-0 opacity-80 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Schedule Visit Modal */}
       {scheduleModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -321,12 +347,22 @@ export default function PartnerApplicationsPage() {
           </div>
         )}
 
-        {/* Search */}
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search CRN, firm, owner…"
-          className="ml-auto w-64 border border-border rounded-md px-3 py-1.5 text-sm text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-colors"
-        />
+        {/* Search + Refresh */}
+        <div className="ml-auto flex items-center gap-2">
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search CRN, firm, owner…"
+            className="w-64 border border-border rounded-md px-3 py-1.5 text-sm text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-colors"
+          />
+          <button
+            onClick={() => fetchData()}
+            disabled={loading}
+            title="Refresh"
+            className="flex items-center justify-center h-8 w-8 rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Table */}

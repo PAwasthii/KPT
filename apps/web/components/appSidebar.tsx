@@ -146,45 +146,6 @@ export function AppSidebar() {
               />
             </SidebarCollapsibleItem>
 
-            {/* Finance Management */}
-            <SidebarCollapsibleItem
-              icon={Banknote as any}
-              label="Finance Management"
-              active={isClient && isFinanceActive}
-              defaultOpen={isClient && isFinanceActive}
-            >
-              <SidebarItem
-                label="Finance Overview"
-                href="/finance/overview"
-                active={isClient && pathname === "/finance/overview"}
-                icon={BarChart3 as any}
-              />
-              <SidebarItem
-                label="Invoices"
-                href="/finance/invoices"
-                active={isClient && pathname.startsWith("/finance/invoices")}
-                icon={ReceiptText as any}
-              />
-              <SidebarItem
-                label="SKU Analysis"
-                href="/finance/sku-analysis"
-                active={isClient && pathname.startsWith("/finance/sku-analysis")}
-                icon={Package as any}
-              />
-              <SidebarItem
-                label="Budget & Planning"
-                href="/finance/budget"
-                active={isClient && pathname.startsWith("/finance/budget")}
-                icon={TrendingUp as any}
-              />
-              <SidebarItem
-                label="Incentive Liability"
-                href="/finance/incentives"
-                active={isClient && pathname.startsWith("/finance/incentives")}
-                icon={Gift as any}
-              />
-            </SidebarCollapsibleItem>
-
             {/* Sales Management */}
             <SidebarCollapsibleItem
               icon={TrendingUp as any}
@@ -254,6 +215,45 @@ export function AppSidebar() {
                 href="/performance/trends"
                 active={isClient && pathname === "/performance/trends"}
                 icon={TrendingUp as any}
+              />
+            </SidebarCollapsibleItem>
+
+            {/* Finance Management */}
+            <SidebarCollapsibleItem
+              icon={Banknote as any}
+              label="Finance Management"
+              active={isClient && isFinanceActive}
+              defaultOpen={isClient && isFinanceActive}
+            >
+              <SidebarItem
+                label="Finance Overview"
+                href="/finance/overview"
+                active={isClient && pathname === "/finance/overview"}
+                icon={BarChart3 as any}
+              />
+              <SidebarItem
+                label="Invoices"
+                href="/finance/invoices"
+                active={isClient && pathname.startsWith("/finance/invoices")}
+                icon={ReceiptText as any}
+              />
+              <SidebarItem
+                label="SKU Analysis"
+                href="/finance/sku-analysis"
+                active={isClient && pathname.startsWith("/finance/sku-analysis")}
+                icon={Package as any}
+              />
+              <SidebarItem
+                label="Budget & Planning"
+                href="/finance/budget"
+                active={isClient && pathname.startsWith("/finance/budget")}
+                icon={TrendingUp as any}
+              />
+              <SidebarItem
+                label="Incentive Liability"
+                href="/finance/incentives"
+                active={isClient && pathname.startsWith("/finance/incentives")}
+                icon={Gift as any}
               />
             </SidebarCollapsibleItem>
 
