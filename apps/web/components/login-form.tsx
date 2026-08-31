@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Loader2, ArrowRight, Mail, KeyRound, Chrome } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight, Mail, KeyRound } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -20,33 +20,9 @@ import BrandPanel from "./BrandPanel";
 import { useAuth } from "../contexts/AuthContext";
 import { validateEmailBasic } from "../lib/validation";
 
-// ─── Icons ─────────────────────────────────────────────────────────────────
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-      <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.66-.22-2.45H12v4.63h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3h3.88c2.27-2.09 3.57-5.17 3.57-8.8z" />
-      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.88-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.94H1.28v3.1C3.26 21.3 7.3 24 12 24z" />
-      <path fill="#FBBC05" d="M5.29 14.31A7.2 7.2 0 0 1 4.9 12c0-.8.14-1.58.39-2.31v-3.1H1.28A11.98 11.98 0 0 0 0 12c0 1.93.46 3.76 1.28 5.41l4.01-3.1z" />
-      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.94 1.19 15.24 0 12 0 7.3 0 3.26 2.7 1.28 6.59l4.01 3.1C6.23 6.86 8.88 4.75 12 4.75z" />
-    </svg>
-  );
-}
-
-function MicrosoftIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-      <rect x="1" y="1" width="10" height="10" fill="#F25022" />
-      <rect x="13" y="1" width="10" height="10" fill="#7FBA00" />
-      <rect x="1" y="13" width="10" height="10" fill="#00A4EF" />
-      <rect x="13" y="13" width="10" height="10" fill="#FFB900" />
-    </svg>
-  );
-}
-
 // ─── Tab types ──────────────────────────────────────────────────────────────
 
-type AuthTab = "password" | "otp" | "sso";
+type AuthTab = "password" | "otp";
 type OtpStep = "email" | "code";
 
 // ─── Password tab ───────────────────────────────────────────────────────────
@@ -376,56 +352,6 @@ function OtpTab() {
   );
 }
 
-// ─── SSO tab ────────────────────────────────────────────────────────────────
-
-function SsoTab() {
-  const googleConfigured = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const microsoftConfigured = !!process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID;
-  const noneConfigured = !googleConfigured && !microsoftConfigured;
-
-  const handleSso = (provider: "google" | "microsoft") => {
-    window.location.href = `/api/auth/sso/${provider}`;
-  };
-
-  return (
-    <div className="flex flex-col gap-4">
-      {noneConfigured && (
-        <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          SSO is not configured for this portal. Contact your KPT regional manager.
-        </div>
-      )}
-
-      <Button
-        type="button"
-        variant="outline"
-        disabled={!googleConfigured}
-        onClick={() => handleSso("google")}
-        className="w-full border-border text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-        title={!googleConfigured ? "Google SSO is not configured" : undefined}
-      >
-        <GoogleIcon />
-        Continue with Google
-      </Button>
-
-      <Button
-        type="button"
-        variant="outline"
-        disabled={!microsoftConfigured}
-        onClick={() => handleSso("microsoft")}
-        className="w-full border-border text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-        title={!microsoftConfigured ? "Microsoft SSO is not configured" : undefined}
-      >
-        <MicrosoftIcon />
-        Continue with Microsoft
-      </Button>
-
-      <p className="text-xs text-center text-muted-foreground">
-        SSO preserves your existing role. New accounts are created as Guest.
-      </p>
-    </div>
-  );
-}
-
 // ─── Main LoginForm ──────────────────────────────────────────────────────────
 
 export function LoginForm({
@@ -459,7 +385,6 @@ export function LoginForm({
   const tabs: { id: AuthTab; label: string }[] = [
     { id: "password", label: "Password" },
     { id: "otp", label: "Email OTP" },
-    { id: "sso", label: "SSO" },
   ];
 
   return (
@@ -514,7 +439,6 @@ export function LoginForm({
 
           {activeTab === "password" && <PasswordTab />}
           {activeTab === "otp" && <OtpTab />}
-          {activeTab === "sso" && <SsoTab />}
 
           <FieldDescription className="mt-4 text-center text-muted-foreground text-xs">
             For access, contact your KPT regional manager.

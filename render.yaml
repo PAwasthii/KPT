@@ -40,9 +40,9 @@ services:
       - key: DEVELOPER_LOGIN_NAME
         sync: false
 
-      # CORS — set to your Render web service URL once deployed
+      # CORS — Render web service URL
       - key: FRONTEND_URL
-        sync: false
+        value: https://innocrm-web.onrender.com
 
       # AWS S3
       - key: AWS_ACCESS_KEY_ID
@@ -66,7 +66,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL
-        sync: false
+        value: otp@wapsio.com
 
       # GST validation
       - key: GST_API_URL
@@ -102,8 +102,34 @@ services:
       - key: NODE_ENV
         value: production
 
-      # API URL — set to your Render API service URL once deployed
+      # API URL
       - key: NEXT_PUBLIC_API_URL
+        value: https://innocrm-api.onrender.com
+
+      # App URL (used by partner portal eSign links)
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://innocrm-web.onrender.com
+
+      # Database — same Supabase instance as API service
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+
+      # Auth — must match API service JWT_SECRET
+      - key: JWT_SECRET
+        sync: false
+      - key: KPT_JWT_SECRET
+        sync: false
+
+      # Supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # SMS (KPT partner OTP)
+      - key: FAST2SMS_API_KEY
         sync: false
 
       # Branding
