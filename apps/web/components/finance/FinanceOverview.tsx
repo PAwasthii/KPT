@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import {
-  FileText, Wallet, AlertCircle, Clock, BarChart2, TrendingUp,
+  FileText, Wallet, AlertCircle, Clock, BarChart2, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { useFinanceOverview } from "../../hooks/useFinance";
 import { useCurrency } from "../../contexts/CurrencyContext";
@@ -13,10 +13,11 @@ function fmt(n: number, symbol: string, currency: string, convert: (v: number) =
 }
 
 function KpiCard({
-  title, value, sub, icon: Icon, highlight,
+  title, value, sub, icon: Icon, highlight, trend,
 }: {
   title: string; value: string; sub?: string; icon: React.ElementType;
   highlight?: "green" | "red" | "amber" | "blue";
+  trend?: number | null;
 }) {
   const border =
     highlight === "green" ? "border-l-4 border-l-green-500"
@@ -28,12 +29,22 @@ function KpiCard({
     <Card className={`h-full ${border}`}>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{title}</p>
             <p className="text-2xl font-bold text-foreground">{value}</p>
-            {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+            <div className="flex items-center gap-2 mt-1">
+              {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+              {trend != null && (
+                <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${trend >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  {trend >= 0
+                    ? <TrendingUp className="h-3 w-3" />
+                    : <TrendingDown className="h-3 w-3" />}
+                  {trend >= 0 ? "+" : ""}{trend}% MoM
+                </span>
+              )}
+            </div>
           </div>
-          <div className="p-2.5 rounded-lg bg-primary/10">
+          <div className="p-2.5 rounded-lg bg-primary/10 shrink-0 ml-2">
             <Icon className="h-5 w-5 text-primary" />
           </div>
         </div>
@@ -86,6 +97,7 @@ export function FinanceOverview() {
 
   const d = resp?.data;
   const kpis = d?.kpis ?? {};
+  const kpiTrends = d?.kpiTrends ?? {};
   const revenueTrend: Array<{ month: number; revenue: number; collections: number }> = d?.revenueTrend ?? [];
   const rvb: Array<{ month: number; actual: number; budget: number; variance: number }> = d?.revenueVsBudget ?? [];
   const revenueByPartner: Array<{ name: string; ytdSales: number; targetAmount: number }> = d?.revenueByPartner ?? [];
@@ -104,8 +116,8 @@ export function FinanceOverview() {
     <div className="p-6 space-y-6 animate-kpt-fade-up">
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KpiCard title="Invoiced" value={f(kpis.invoiced || 0)} sub="All non-cancelled invoices" icon={FileText} highlight="blue" />
-        <KpiCard title="Collected" value={f(kpis.collected || 0)} sub="Payments received" icon={Wallet} highlight="green" />
+        <KpiCard title="Invoiced" value={f(kpis.invoiced || 0)} sub="All non-cancelled invoices" icon={FileText} highlight="blue" trend={kpiTrends.invoiced} />
+        <KpiCard title="Collected" value={f(kpis.collected || 0)} sub="Payments received" icon={Wallet} highlight="green" trend={kpiTrends.collected} />
         <KpiCard
           title="Outstanding"
           value={f(kpis.outstanding || 0)}

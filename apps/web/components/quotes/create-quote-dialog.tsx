@@ -34,13 +34,13 @@ export function CreateQuoteDialog({
         onOpenChange(false)
       },
       onError: (err: any) => {
-        const code = err?.response?.data?.code
+        const code = err?.code
         const message =
           code === "NO_LINE_ITEMS"
             ? "Opportunity has no line items. Add at least one line item in the Products tab before generating a quote."
-            : err?.response?.data?.error ?? "Failed to create quote."
+            : err?.message ?? "Failed to create quote."
         setErrorMessage(message)
-        toast.error(message)
+        toast.error(err, "Failed to create quote")
       },
     })
   }

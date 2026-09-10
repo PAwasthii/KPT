@@ -69,6 +69,9 @@ import {
   SalesOrderListItem,
   SalesOrderDetail,
   ApprovalProcessApi,
+  KptOrderListItem,
+  KptOrderDetail,
+  StockCheckResult,
 } from "./types";
 
 // Auth Services
@@ -1344,8 +1347,8 @@ export const quoteService = {
     const response = await apiClient.get(`/api/quotes/${quoteId}/orders`, { params: { page: 1, limit: 1 } })
     return response.data
   },
-  generateOrder: async (quoteId: number): Promise<{ data: SalesOrderDetail }> => {
-    const response = await apiClient.post(`/api/quotes/${quoteId}/generate-order`)
+  generateOrder: async (quoteId: number, channelPartnerId?: number): Promise<{ data: SalesOrderDetail }> => {
+    const response = await apiClient.post(`/api/quotes/${quoteId}/generate-order`, channelPartnerId ? { channelPartnerId } : {})
     return response.data
   },
   downloadPdf: async (quoteId: number, quoteNumber: string): Promise<void> => {
@@ -1741,6 +1744,7 @@ export const opportunityService = {
       listPrice?: number;
       discount?: number;
       description?: string | null;
+      priceBookEntryId?: number;
     }
   ): Promise<{ data: OpportunityLineItem }> => {
     const response = await apiClient.post(
@@ -1765,6 +1769,18 @@ export const opportunityService = {
       `/api/opportunities/${opportunityId}/line-items/${lineItemId}`,
       data
     );
+    return response.data;
+  },
+
+  getPipelineSummary: async (): Promise<{
+    data: {
+      stages: Array<{ stage: string; count: number; totalValue: number }>;
+      totalOpen: number;
+      totalWon: number;
+      winRate: number | null;
+    };
+  }> => {
+    const response = await apiClient.get('/api/opportunities/pipeline-summary');
     return response.data;
   },
 };
@@ -2220,6 +2236,71 @@ export const kptFinanceService = {
   },
   getIncentives: async (params?: { period?: string; status?: string }) => {
     const response = await apiClient.get('/api/kpt/finance/incentives', { params });
+    return response.data;
+  },
+};
+
+// ============================================
+// KPT — Order Management
+// ============================================
+export const kptOrderService = {
+  listOrders: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    channelPartnerId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    region?: string;
+    search?: string;
+  }): Promise<{ data: KptOrderListItem[]; pagination: any }> => {
+    const response = await apiClient.get('/api/kpt/orders', { params });
+    return response.data;
+  },
+
+  getOrderById: async (id: number): Promise<{ data: KptOrderDetail }> => {
+    const response = await apiClient.get(`/api/kpt/orders/${id}`);
+    return response.data;
+  },
+
+  checkStock: async (id: number): Promise<{ data: StockCheckResult }> => {
+    const response = await apiClient.get(`/api/kpt/orders/${id}/stock-check`);
+    return response.data;
+  },
+
+  updateStatus: async (
+    id: number,
+    data: { status: string; cancellationReason?: string }
+  ): Promise<{ data: any; message: string }> => {
+    const response = await apiClient.patch(`/api/kpt/orders/${id}/status`, data);
+    return response.data;
+  },
+
+  updatePaymentStatus: async (
+    id: number,
+    paymentStatus: string
+  ): Promise<{ data: any }> => {
+    const response = await apiClient.patch(`/api/kpt/orders/${id}/payment-status`, { paymentStatus });
+    return response.data;
+  },
+
+  allocateStock: async (id: number): Promise<{ data: any; message: string }> => {
+    const response = await apiClient.post(`/api/kpt/orders/${id}/allocate-stock`);
+    return response.data;
+  },
+
+  dispatchOrder: async (id: number, dispatchReference?: string): Promise<{ data: any; message: string }> => {
+    const response = await apiClient.post(`/api/kpt/orders/${id}/dispatch`, { dispatchReference });
+    return response.data;
+  },
+
+  deliverOrder: async (id: number): Promise<{ data: any; message: string }> => {
+    const response = await apiClient.post(`/api/kpt/orders/${id}/deliver`);
+    return response.data;
+  },
+
+  assignPartner: async (id: number, channelPartnerId: number): Promise<{ data: any; message: string }> => {
+    const response = await apiClient.patch(`/api/kpt/orders/${id}/partner`, { channelPartnerId });
     return response.data;
   },
 };

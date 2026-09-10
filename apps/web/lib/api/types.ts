@@ -1265,6 +1265,7 @@ export interface OpportunityLineItem {
   productId: number
   product: { id: number; name: string; code?: string | null }
   priceBookEntryId?: number | null
+  priceBookEntry?: { id: number; listPrice: string } | null
   quantity: number
   listPrice: string
   unitPrice: string
@@ -1374,4 +1375,145 @@ export interface QuoteOrderItem {
   expectedShipDate: string | null
   owner: { id: number; firstName: string | null; lastName: string | null }
   createdAt: string
+}
+
+// ─── KPT Order Management ─────────────────────────────────────────────────────
+
+export type OrderPaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE'
+export type AllocationStatus = 'RESERVED' | 'DISPATCHED' | 'CANCELLED'
+
+export interface KptOrderListItem {
+  id: number
+  orderNumber: string
+  name: string
+  status: string
+  paymentStatus: OrderPaymentStatus
+  grandTotal: number | string
+  orderDate: string
+  expectedDeliveryDate: string | null
+  createdAt: string
+  channelPartner: { id: number; name: string; type: string; region: string | null } | null
+  quote: { id: number; quoteNumber: string } | null
+  account: { id: number; name: string }
+  _count: { lineItems: number }
+}
+
+export interface KptOrderStockAllocation {
+  id: number
+  allocatedQty: number
+  dispatchedQty: number
+  status: AllocationStatus
+  inventoryItem: { id: number; sku: string; totalQty: number }
+}
+
+export interface KptOrderLineItem {
+  id: number
+  salesOrderId: number
+  productId: number
+  quantity: number
+  listPrice: number | string
+  unitPrice: number | string
+  discount: number | string
+  totalPrice: number | string
+  sortOrder: number
+  product: {
+    id: number
+    name: string
+    code: string
+    inventoryItem: { id: number; sku: string; totalQty: number; stockStatus: string } | null
+  }
+  stockAllocations: KptOrderStockAllocation[]
+}
+
+export interface KptOrderDetail {
+  id: number
+  orderNumber: string
+  name: string
+  status: string
+  paymentStatus: OrderPaymentStatus
+  orderDate: string
+  expectedShipDate: string | null
+  actualShipDate: string | null
+  expectedDeliveryDate: string | null
+  actualDeliveryDate: string | null
+  approvedAt: string | null
+  cancelledAt: string | null
+  cancellationReason: string | null
+  dispatchReference: string | null
+  subtotal: number | string
+  discount: number | string
+  discountPercent: number | string
+  taxAmount: number | string
+  taxPercent: number | string
+  shippingAmount: number | string
+  grandTotal: number | string
+  paymentTerms: string | null
+  deliveryTerms: string | null
+  notes: string | null
+  billingName: string | null
+  billingStreet: string | null
+  billingCity: string | null
+  billingState: string | null
+  billingPostalCode: string | null
+  billingCountry: string | null
+  shippingName: string | null
+  shippingStreet: string | null
+  shippingCity: string | null
+  shippingState: string | null
+  shippingPostalCode: string | null
+  shippingCountry: string | null
+  createdAt: string
+  updatedAt: string
+  lineItems: KptOrderLineItem[]
+  quote: {
+    id: number
+    quoteNumber: string
+    status: string
+    opportunity: { id: number; name: string } | null
+  } | null
+  account: { id: number; name: string }
+  contact: { id: number; name: string; email: string | null; phone: string | null } | null
+  owner: { id: number; firstName: string | null; lastName: string | null; email: string | null }
+  approvedBy: { id: number; firstName: string | null; lastName: string | null } | null
+  channelPartner: {
+    id: number
+    name: string
+    type: string
+    tier: string
+    region: string | null
+    contactName: string
+    contactEmail: string | null
+    contactPhone: string
+  } | null
+  financeInvoices: {
+    id: number
+    invoiceNumber: string
+    status: string
+    totalAmount: number | string
+    paidAmount: number | string
+    dueDate: string | null
+  }[]
+}
+
+export interface StockCheckItem {
+  lineItemId: number
+  productId: number
+  productName: string
+  productCode: string
+  orderedQty: number
+  availableQty: number | null
+  alreadyAllocated: number
+  shortage: number | null
+  hasInventoryLink: boolean
+  canAllocate: boolean
+  inventoryItemId: number | null
+  sku: string | null
+}
+
+export interface StockCheckResult {
+  orderId: number
+  orderNumber: string
+  orderStatus: string
+  allAllocatable: boolean
+  items: StockCheckItem[]
 }

@@ -1122,6 +1122,8 @@ model SalesOrder {
   notes               String?
   internalNotes       String?               @map("internal_notes")
   cancellationReason  String?               @map("cancellation_reason")
+  dispatchReference   String?               @map("dispatch_reference")
+  paymentStatus       OrderPaymentStatus    @default(UNPAID) @map("payment_status")
 
   // Foreign keys
   quoteId             Int?                  @map("quote_id")
@@ -1144,6 +1146,7 @@ model SalesOrder {
   channelPartner      ChannelPartner?       @relation(fields: [channelPartnerId], references: [id])
   lineItems           SalesOrderLineItem[]
   financeInvoices     FinanceInvoice[]
+  stockAllocations    StockOrderAllocation[]
 
   @@index([quoteId])
   @@index([accountId])
@@ -1170,10 +1173,33 @@ model SalesOrderLineItem {
   // Relations
   salesOrder          SalesOrder            @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   product             Product               @relation(fields: [productId], references: [id])
+  stockAllocations    StockOrderAllocation[]
 
   @@index([salesOrderId])
   @@index([productId])
   @@map("sales_order_line_items")
+}
+
+model StockOrderAllocation {
+  id              Int                  @id @default(autoincrement())
+  salesOrderId    Int                  @map("sales_order_id")
+  salesOrder      SalesOrder           @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  lineItemId      Int                  @map("line_item_id")
+  lineItem        SalesOrderLineItem   @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  inventoryItemId Int                  @map("inventory_item_id")
+  inventoryItem   InventoryItem        @relation(fields: [inventoryItemId], references: [id])
+  allocatedQty    Int                  @map("allocated_qty")
+  dispatchedQty   Int                  @default(0) @map("dispatched_qty")
+  status          AllocationStatus     @default(RESERVED)
+  notes           String?
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  @@index([salesOrderId])
+  @@index([lineItemId])
+  @@index([inventoryItemId])
+  @@index([status])
+  @@map("stock_order_allocations")
 }
 
 // ============================================
@@ -1585,8 +1611,9 @@ model InventoryItem {
   productId   Int?        @unique @map("product_id")
   product     Product?    @relation("InventoryProduct", fields: [productId], references: [id])
 
-  stockEntries   StockEntry[]
-  stockMovements StockMovement[]
+  stockEntries          StockEntry[]
+  stockMovements        StockMovement[]
+  stockOrderAllocations StockOrderAllocation[]
 
   @@index([sku])
   @@index([category])
@@ -1622,6 +1649,19 @@ enum MovementType {
   DISPATCH
   RETURN
   ADJUSTMENT
+}
+
+enum AllocationStatus {
+  RESERVED
+  DISPATCHED
+  CANCELLED
+}
+
+enum OrderPaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
 }
 
 // ============================================

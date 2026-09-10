@@ -36,6 +36,7 @@ import {
   BookOpen,
   Target,
   CheckSquare,
+  ClipboardCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -68,6 +69,7 @@ export function AppSidebar() {
   const isChannelPartnersActive = pathname.startsWith("/channel-partners") || pathname.startsWith("/partner-applications");
   const isStockInventoryActive = pathname.startsWith("/stock-inventory");
   const isStockManagementActive = pathname.startsWith("/stock-management") || pathname.startsWith("/stock-visibility");
+  const isOrderManagementActive = pathname.startsWith("/orders");
   const isPerformanceActive = pathname.startsWith("/performance");
   const isFinanceActive = pathname.startsWith("/finance");
   const isSalesActive = pathname.startsWith("/sales");
@@ -146,6 +148,21 @@ export function AppSidebar() {
               />
             </SidebarCollapsibleItem>
 
+            {/* Order Management */}
+            <SidebarCollapsibleItem
+              icon={ClipboardCheck as any}
+              label="Order Management"
+              active={isClient && isOrderManagementActive}
+              defaultOpen={isClient && isOrderManagementActive}
+            >
+              <SidebarItem
+                label="Orders"
+                href="/orders"
+                active={isClient && pathname.startsWith("/orders")}
+                icon={ShoppingCart as any}
+              />
+            </SidebarCollapsibleItem>
+
             {/* Sales Management */}
             <SidebarCollapsibleItem
               icon={TrendingUp as any}
@@ -182,12 +199,6 @@ export function AppSidebar() {
                 href="/sales/approvals"
                 active={isClient && pathname.startsWith("/sales/approvals")}
                 icon={CheckSquare as any}
-              />
-              <SidebarItem
-                label="Orders"
-                href="/sales/orders"
-                active={isClient && pathname.startsWith("/sales/orders")}
-                icon={ShoppingCart as any}
               />
             </SidebarCollapsibleItem>
 

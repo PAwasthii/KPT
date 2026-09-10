@@ -11,8 +11,10 @@ import {
   Gift,
   IndianRupee,
   UserPlus,
+  GitMerge,
 } from "lucide-react";
 import { useKptKPIs, usePartnerRankings, useStockAlerts } from "../hooks/useKpt";
+import { usePipelineSummary } from "../hooks/useOpportunities";
 import { useCurrency } from "../contexts/CurrencyContext";
 
 const TIER_COLORS: Record<string, string> = {
@@ -29,10 +31,22 @@ const STOCK_STATUS_DOT: Record<string, string> = {
   HEALTHY: "bg-green-500",
 };
 
+const STAGE_META: Record<string, { label: string; color: string; barColor: string }> = {
+  PROSPECT:          { label: "Prospect",          color: "text-blue-600",   barColor: "bg-blue-400" },
+  QUALIFICATION:     { label: "Qualification",     color: "text-blue-600",   barColor: "bg-blue-500" },
+  DISCOVERY:         { label: "Discovery",         color: "text-indigo-600", barColor: "bg-indigo-500" },
+  VALUE_PROPOSITION: { label: "Value Proposition", color: "text-violet-600", barColor: "bg-violet-500" },
+  PROPOSAL:          { label: "Proposal",          color: "text-purple-600", barColor: "bg-purple-500" },
+  NEGOTIATION:       { label: "Negotiation",       color: "text-amber-600",  barColor: "bg-amber-500" },
+  CLOSED_WON:        { label: "Won",               color: "text-green-600",  barColor: "bg-green-500" },
+  CLOSED_LOST:       { label: "Lost",              color: "text-red-500",    barColor: "bg-red-400" },
+};
+
 export function KptDashboard() {
   const { data: kpisData, isLoading: kpisLoading } = useKptKPIs();
   const { data: rankingsData, isLoading: rankingsLoading } = usePartnerRankings();
   const { data: alertsData, isLoading: alertsLoading } = useStockAlerts();
+  const { data: pipelineData, isLoading: pipelineLoading } = usePipelineSummary();
   const { symbol, currency, convert } = useCurrency();
 
   const fmt = (n: number) => currency === 'INR'
@@ -45,6 +59,7 @@ export function KptDashboard() {
   const kpis = kpisData?.data;
   const rankings = rankingsData?.data ?? [];
   const alerts = alertsData?.data ?? [];
+  const pipeline = pipelineData?.data;
 
   const kpiCards = kpis
     ? [
@@ -173,6 +188,72 @@ export function KptDashboard() {
           })}
         </div>
       )}
+
+      {/* Pipeline Funnel */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-bold text-primary uppercase tracking-wide flex items-center gap-2">
+                <GitMerge className="h-4 w-4" />
+                Sales Pipeline
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Opportunities by stage</p>
+            </div>
+            {pipeline && (
+              <div className="flex items-center gap-4 text-right">
+                <div>
+                  <p className="text-xs text-muted-foreground">Open Pipeline</p>
+                  <p className="text-sm font-bold text-foreground">{fmt(pipeline.totalOpen)}</p>
+                </div>
+                {pipeline.winRate != null && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Win Rate</p>
+                    <p className={`text-sm font-bold ${pipeline.winRate >= 50 ? "text-green-600" : pipeline.winRate >= 30 ? "text-amber-600" : "text-red-500"}`}>
+                      {pipeline.winRate}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {pipelineLoading ? (
+            <div className="px-6 pb-4 space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-7 rounded bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : !pipeline || pipeline.stages.every((s) => s.count === 0) ? (
+            <div className="p-6 text-center text-muted-foreground text-sm">No opportunities yet</div>
+          ) : (
+            <div className="divide-y divide-border">
+              {(() => {
+                const maxVal = Math.max(...pipeline.stages.map((s) => s.totalValue), 1);
+                return pipeline.stages
+                  .filter((s) => s.count > 0)
+                  .map((s) => {
+                    const meta = STAGE_META[s.stage] ?? { label: s.stage, color: "text-foreground", barColor: "bg-muted-foreground" };
+                    const barPct = Math.max(4, Math.round((s.totalValue / maxVal) * 100));
+                    return (
+                      <div key={s.stage} className="flex items-center gap-3 px-6 py-2.5 hover:bg-accent/40 transition-colors">
+                        <span className={`w-32 shrink-0 text-xs font-semibold ${meta.color}`}>{meta.label}</span>
+                        <div className="flex-1">
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div className={`h-full rounded-full ${meta.barColor}`} style={{ width: `${barPct}%` }} />
+                          </div>
+                        </div>
+                        <span className="w-14 text-right text-xs text-muted-foreground shrink-0">{s.count} deal{s.count !== 1 ? "s" : ""}</span>
+                        <span className="w-16 text-right text-xs font-semibold text-foreground shrink-0">{fmt(s.totalValue)}</span>
+                      </div>
+                    );
+                  });
+              })()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Middle row */}
       <div className="grid gap-6 md:grid-cols-2">

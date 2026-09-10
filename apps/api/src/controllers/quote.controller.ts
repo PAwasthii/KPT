@@ -378,6 +378,11 @@ export class QuoteController {
       const quoteId = this.parseId(req.params.id, res, 'Quote ID', operation);
       if (quoteId === null) return;
 
+      // Optional: caller may supply a channelPartnerId to assign at order creation
+      const channelPartnerId: number | null = req.body?.channelPartnerId
+        ? parseInt(req.body.channelPartnerId, 10) || null
+        : null;
+
       // Fetch quote with line items and linked inventory items for stock deduction
       const quote = await prisma.quote.findUnique({
         where: { id: quoteId },
@@ -430,7 +435,8 @@ export class QuoteController {
             orderNumber,
             name: `Order for ${quote.name}`,
             description: quote.description,
-            status: 'DRAFT',
+            status: 'APPROVED',
+            approvedAt: new Date(),
             // Pricing snapshot from quote
             subtotal: quote.subtotal,
             discount: quote.discount,
@@ -462,6 +468,7 @@ export class QuoteController {
             accountId: quote.accountId,
             contactId: quote.contactId,
             ownerId: req.user!.id,
+            channelPartnerId: channelPartnerId ?? undefined,
             // Line items copied from quote
             lineItems: {
               create: quote.lineItems.map((item) => ({

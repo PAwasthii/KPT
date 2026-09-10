@@ -989,6 +989,7 @@ export class OpportunityController {
             orderBy: { sortOrder: 'asc' },
             include: {
               product: { select: { id: true, name: true, code: true } },
+              priceBookEntry: { select: { id: true, listPrice: true } },
             },
           },
           activities: {
@@ -1098,6 +1099,7 @@ export class OpportunityController {
         orderBy: { sortOrder: 'asc' },
         include: {
           product: { select: { id: true, name: true, code: true } },
+          priceBookEntry: { select: { id: true, listPrice: true } },
         },
       });
 
@@ -1430,6 +1432,54 @@ export class OpportunityController {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         return handleError(error, res, operation);
       }
+      handleError(error, res, operation);
+    }
+  }
+
+  /**
+   * GET /api/opportunities/pipeline-summary
+   * Returns opportunity counts and values grouped by stage.
+   */
+  async getPipelineSummary(req: Request, res: Response) {
+    const operation = 'Get pipeline summary';
+    try {
+      const STAGE_ORDER: OpportunityStage[] = [
+        OpportunityStage.PROSPECT,
+        OpportunityStage.QUALIFICATION,
+        OpportunityStage.DISCOVERY,
+        OpportunityStage.VALUE_PROPOSITION,
+        OpportunityStage.PROPOSAL,
+        OpportunityStage.NEGOTIATION,
+        OpportunityStage.CLOSED_WON,
+        OpportunityStage.CLOSED_LOST,
+      ];
+
+      const grouped = await prisma.opportunity.groupBy({
+        by: ['stage'],
+        where: { deletedAt: null },
+        _count: { id: true },
+        _sum: { amount: true },
+      });
+
+      const stageMap = new Map(grouped.map((r) => [r.stage, r]));
+      const stages = STAGE_ORDER.map((stage) => ({
+        stage,
+        count: stageMap.get(stage)?._count.id ?? 0,
+        totalValue: Number(stageMap.get(stage)?._sum.amount ?? 0),
+      }));
+
+      const activeStages = stages.filter(
+        (s) => s.stage !== OpportunityStage.CLOSED_WON && s.stage !== OpportunityStage.CLOSED_LOST,
+      );
+      const totalOpen = activeStages.reduce((sum, s) => sum + s.totalValue, 0);
+      const totalWon = stages.find((s) => s.stage === OpportunityStage.CLOSED_WON)?.totalValue ?? 0;
+      const wonCount = stages.find((s) => s.stage === OpportunityStage.CLOSED_WON)?.count ?? 0;
+      const lostCount = stages.find((s) => s.stage === OpportunityStage.CLOSED_LOST)?.count ?? 0;
+      const closedTotal = wonCount + lostCount;
+      const winRate = closedTotal > 0 ? Math.round((wonCount / closedTotal) * 100) : null;
+
+      return res.json({ data: { stages, totalOpen, totalWon, winRate } });
+    } catch (error) {
       handleError(error, res, operation);
     }
   }

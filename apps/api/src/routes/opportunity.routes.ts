@@ -12,6 +12,9 @@ router.use(requireRole([UserRole.SYSTEM_ADMIN, UserRole.ADMIN, UserRole.SALES]))
 // GET /api/opportunities - List opportunities (paginated, filterable)
 router.get('/', opportunityController.getAllOpportunities.bind(opportunityController));
 
+// GET /api/opportunities/pipeline-summary - Stage breakdown for dashboard funnel
+router.get('/pipeline-summary', opportunityController.getPipelineSummary.bind(opportunityController));
+
 // POST /api/opportunities - Create a new opportunity
 router.post('/', opportunityController.createOpportunity.bind(opportunityController));
 

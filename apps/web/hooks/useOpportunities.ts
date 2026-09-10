@@ -20,6 +20,16 @@ export const opportunityKeys = {
   quotesAll: () => [...opportunityKeys.all, 'quotes'] as const,
   quotes: (opportunityId: number, page?: number, limit?: number) =>
     [...opportunityKeys.quotesAll(), opportunityId, page, limit] as const,
+  pipelineSummary: () => [...opportunityKeys.all, 'pipeline-summary'] as const,
+}
+
+export function usePipelineSummary() {
+  return useQuery({
+    queryKey: opportunityKeys.pipelineSummary(),
+    queryFn: () => opportunityService.getPipelineSummary(),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 }
 
 export function useOpportunitiesWithPagination(filters?: {
@@ -139,6 +149,7 @@ export function useAddOpportunityLineItem() {
         listPrice?: number
         discount?: number
         description?: string | null
+        priceBookEntryId?: number
       }
     }) => opportunityService.addOpportunityLineItem(opportunityId, data),
     onSuccess: (_data, { opportunityId }) => {

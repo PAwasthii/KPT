@@ -26,6 +26,8 @@ export class FinanceController {
       const now = new Date();
       const currentYear = now.getFullYear();
       const startOfYear = new Date(currentYear, 0, 1);
+      const startOfThisMonth = new Date(currentYear, now.getMonth(), 1);
+      const startOfLastMonth = new Date(currentYear, now.getMonth() - 1, 1);
 
       const [
         revenueAgg,
@@ -43,6 +45,10 @@ export class FinanceController {
         monthlyBudgets,
         paidInvoicesTrend,
         overdueInvoiceList,
+        momInvoicedCurrent,
+        momInvoicedPrev,
+        momCollectedCurrent,
+        momCollectedPrev,
       ] = await Promise.all([
         // Total revenue from active sales orders YTD
         prisma.salesOrder.aggregate({
@@ -137,6 +143,26 @@ export class FinanceController {
           include: { partner: { select: { id: true, name: true } } },
           orderBy: { totalAmount: 'desc' },
           take: 10,
+        }),
+        // MoM: invoices created this month
+        prisma.financeInvoice.aggregate({
+          where: { status: { not: FinanceInvoiceStatus.CANCELLED }, invoiceDate: { gte: startOfThisMonth } },
+          _sum: { totalAmount: true },
+        }),
+        // MoM: invoices created last month
+        prisma.financeInvoice.aggregate({
+          where: { status: { not: FinanceInvoiceStatus.CANCELLED }, invoiceDate: { gte: startOfLastMonth, lt: startOfThisMonth } },
+          _sum: { totalAmount: true },
+        }),
+        // MoM: collections received this month
+        prisma.financeInvoice.aggregate({
+          where: { status: { in: [FinanceInvoiceStatus.PAID, FinanceInvoiceStatus.PARTIALLY_PAID] }, paymentDate: { gte: startOfThisMonth } },
+          _sum: { paidAmount: true },
+        }),
+        // MoM: collections received last month
+        prisma.financeInvoice.aggregate({
+          where: { status: { in: [FinanceInvoiceStatus.PAID, FinanceInvoiceStatus.PARTIALLY_PAID] }, paymentDate: { gte: startOfLastMonth, lt: startOfThisMonth } },
+          _sum: { paidAmount: true },
         }),
       ]);
 
@@ -261,6 +287,21 @@ export class FinanceController {
       const totalBudget = Number(yearBudgetAgg._sum.budgetAmount || 0);
       const budgetAchievement = totalBudget > 0 ? Math.round((totalRevenue / totalBudget) * 100) : null;
 
+      const momPct = (cur: number, prev: number): number | null => {
+        if (prev === 0) return cur > 0 ? 100 : null;
+        return Math.round(((cur - prev) / prev) * 100);
+      };
+      const kpiTrends = {
+        invoiced: momPct(
+          Number(momInvoicedCurrent._sum.totalAmount || 0),
+          Number(momInvoicedPrev._sum.totalAmount || 0),
+        ),
+        collected: momPct(
+          Number(momCollectedCurrent._sum.paidAmount || 0),
+          Number(momCollectedPrev._sum.paidAmount || 0),
+        ),
+      };
+
       return res.json({
         success: true,
         data: {
@@ -274,6 +315,7 @@ export class FinanceController {
             totalRevenue,
             totalBudget,
           },
+          kpiTrends,
           revenueTrend,
           revenueVsBudget,
           invoiceStatusSummary: invoiceStatusMap,

@@ -37,6 +37,7 @@ import inventoryRoutes from './inventory.routes.js';
 import incentiveSlabRoutes from './incentiveSlabs.routes.js';
 import performanceRoutes from './performance.routes.js';
 import financeRoutes from './finance.routes.js';
+import kptOrderRoutes from './kptOrder.routes.js';
 import auditLogRoutes from './auditLogs.routes.js';
 import gstRoutes from './gst.routes.js';
 import taxVerifyRoutes from './taxVerify.routes.js';
@@ -121,6 +122,7 @@ export function setupRoutes(app: Express) {
   app.use('/api/kpt/incentive-slabs', requireAuth, incentiveSlabRoutes);
   app.use('/api/kpt/performance', requireAuth, performanceRoutes);
   app.use('/api/kpt/finance', requireAuth, financeRoutes);
+  app.use('/api/kpt/orders', kptOrderRoutes);
 
   // GST verification (any authenticated user)
   app.use('/api/gst', requireAuth, gstRoutes);

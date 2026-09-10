@@ -187,7 +187,10 @@ function ProductLineItemsTable({
     if (!deleteItem) return
     deleteLineItem.mutate(
       { opportunityId, lineItemId: deleteItem.id },
-      { onSuccess: () => { setShowDeleteConfirm(false); setDeleteItem(null) } }
+      {
+        onSuccess: () => { setShowDeleteConfirm(false); setDeleteItem(null) },
+        onError: (error: any) => { toast.error(error, "Failed to delete line item") },
+      }
     )
   }
 
@@ -199,7 +202,10 @@ function ProductLineItemsTable({
     { key: "product", label: "Product Name", render: (_: any, item: OpportunityLineItem) => item.product?.name ?? "—" },
     { key: "productCode", label: "Product Code", render: (_: any, item: OpportunityLineItem) => item.product?.code ?? "—" },
     { key: "quantity", label: "Quantity" },
-    { key: "listPrice", label: "List Price", render: (val: any) => val != null ? `$${Number(val).toFixed(2)}` : "—" },
+    { key: "listPrice", label: "List Price", render: (val: any, item: OpportunityLineItem) => {
+      const price = item.priceBookEntry?.listPrice ?? val
+      return price != null ? `$${Number(price).toFixed(2)}` : "—"
+    }},
     { key: "discount", label: "Discount (%)", render: (val: any) => val != null ? `${Number(val).toFixed(2)}%` : "—" },
     { key: "unitPrice", label: "Unit Price", render: (val: any) => val != null ? `$${Number(val).toFixed(2)}` : "—" },
     { key: "totalPrice", label: "Total Price", render: (val: any) => val != null ? `$${Number(val).toFixed(2)}` : "—" },
@@ -277,7 +283,15 @@ function ProductLineItemsTable({
             </div>
             <div className="space-y-1.5">
               <Label>List Price ($)</Label>
-              <Input type="number" min={0} step="0.01" value={editListPrice} onChange={(e) => setEditListPrice(Number(e.target.value))} />
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={editListPrice}
+                readOnly={!!editItem?.priceBookEntryId}
+                onChange={editItem?.priceBookEntryId ? undefined : (e) => setEditListPrice(Number(e.target.value))}
+                className={editItem?.priceBookEntryId ? "bg-gray-50 cursor-not-allowed" : ""}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Discount (%)</Label>
